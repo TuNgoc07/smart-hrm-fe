@@ -24,6 +24,8 @@ export default function ManagerSidebar() {
           <SidebarItem icon="person_add" label="ATS Pipeline" act="ats" navigate={navigate} />
           <SidebarItem icon="inbox" label="Notifications / Inbox" act="notifications" navigate={navigate} />
           <SidebarItem icon="auto_awesome" label="Insights" act="insights" navigate={navigate} />
+          <SidebarItem icon="settings" label="Settings" act="settings" navigate={navigate} />
+
         </nav>
       </div>
 

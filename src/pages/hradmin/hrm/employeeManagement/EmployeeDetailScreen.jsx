@@ -6,6 +6,8 @@ import ContractTab from "./tabs/ContractTab";
 import LifecycleTab from "./tabs/LifecycleTab";
 import FilesTab from "./tabs/FilesTab";
 
+
+
 export default function EmployeeDetailScreen() {
   const { emp_id } = useParams();
   const [activeTab, setActiveTab] = useState("profile");
@@ -55,12 +57,7 @@ export default function EmployeeDetailScreen() {
   return (
     <div className="w-full px-6 lg:px-10 xl:px-14 2xl:px-16 space-y-6">
       {/* BREADCRUMB */}
-      <div className="text-sm text-slate-500">
-        Employees /{" "}
-        <span className="font-semibold text-slate-900">
-          {employee.name}
-        </span>
-      </div>
+      <BreadCrumb employee={employee} />
 
       {/* ===== PROFILE HEADER + TABS ===== */}
       <div className="bg-white rounded-xl border overflow-hidden">
@@ -125,10 +122,9 @@ export default function EmployeeDetailScreen() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`pb-4 pt-4 text-sm font-semibold border-b-2 transition whitespace-nowrap
-                  ${
-                    activeTab === tab.key
-                      ? "border-primary text-primary"
-                      : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
+                  ${activeTab === tab.key
+                    ? "border-primary text-primary"
+                    : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
                   }`}
               >
                 {tab.label}
@@ -216,19 +212,19 @@ export default function EmployeeDetailScreen() {
       )}
 
       {activeTab === "job" && (
-       <JobDetailsTab/>
+        <JobDetailsTab />
       )}
       {activeTab === "compensation" && (
-       <CompensationTab/>
+        <CompensationTab />
       )}
       {activeTab === "contract" && (
-       <ContractTab/>
+        <ContractTab />
       )}
       {activeTab === "lifecycle" && (
-       <LifecycleTab/>
+        <LifecycleTab />
       )}
       {activeTab == "files" && (
-        <FilesTab/>
+        <FilesTab />
       )}
 
 
@@ -269,6 +265,17 @@ function Row({ label, value, link }) {
       ) : (
         <span className="text-sm font-bold">{value}</span>
       )}
+    </div>
+  );
+}
+
+function BreadCrumb({ employee }) {
+  return (
+    <div className="text-sm text-slate-500">
+      Employees /{" "}
+      <span className="font-semibold text-slate-900">
+        {employee.name}
+      </span>
     </div>
   );
 }

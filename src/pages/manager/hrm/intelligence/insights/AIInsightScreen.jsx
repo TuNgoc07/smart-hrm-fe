@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 function InsightCard({ insight, isSelected, onClick }) {
     return (
         <div
-            className={`group relative bg-white dark:bg-slate-900 border rounded-2xl p-6 transition-all cursor-pointer hover:shadow-lg hover:border-primary/20 ${
-                isSelected ? "border-primary/50 shadow-lg" : "border-slate-200 dark:border-slate-800"
-            }`}
+            className={`group relative bg-white dark:bg-slate-900 border rounded-2xl p-6 transition-all cursor-pointer hover:shadow-lg hover:border-primary/20 ${isSelected ? "border-primary/50 shadow-lg" : "border-slate-200 dark:border-slate-800"
+                }`}
             onClick={onClick}
             role="button"
             tabIndex={0}
@@ -88,9 +87,8 @@ function InsightCard({ insight, isSelected, onClick }) {
 function InsightDetailPanel({ insight, isOpen, onClose }) {
     return (
         <aside
-            className={`w-[400px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 z-20 shadow-2xl transition-all duration-250 ease-out ${
-                isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
-            }`}
+            className={`w-[400px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 z-20 shadow-2xl transition-all duration-250 ease-out ${isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
+                }`}
         >
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <h3 className="text-lg font-bold">Insight Detail</h3>
@@ -167,24 +165,6 @@ function InsightDetailPanel({ insight, isOpen, onClose }) {
 function InsightHeader() {
     return (
         <>
-            <header className="h-16 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="relative w-64">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-                        <input className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-full pl-10 pr-4 py-1.5 text-sm focus:ring-2 focus:ring-primary/20" placeholder="Search insights..." type="text" />
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button className="size-9 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative">
-                        <span className="material-symbols-outlined">notifications</span>
-                        <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
-                    </button>
-                    <button className="size-9 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                        <span className="material-symbols-outlined">help</span>
-                    </button>
-                </div>
-            </header>
-
             <div className="px-8 pt-8 shrink-0">
                 <div className="flex flex-wrap justify-between items-end gap-4 mb-6">
                     <div>
@@ -347,7 +327,7 @@ function AIInsightScreen() {
         <div className="flex h-screen overflow-hidden">
             <main className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-background-dark">
                 <InsightHeader />
-                
+
                 <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
                     {insights.map((insight) => (
                         <InsightCard

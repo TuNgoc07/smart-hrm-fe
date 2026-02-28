@@ -194,7 +194,7 @@ export default function TeamOverviewScreen() {
         <footer className="pt-8 pb-12">
           <div className="flex flex-wrap items-center justify-center gap-3">
             <FooterBtn icon="event_available" label="View Team Attendance" linkto={navigate} act="team-attendance" />
-            <FooterBtn icon="contacts" label="View Team Members" linkto={navigate} act=""/>
+            <FooterBtn icon="contacts" label="View Team Members" linkto={navigate} act="team-members"/>
             <FooterBtn icon="history" label="View Approval History" linkto={navigate} act="approval-history"/>
           </div>
   

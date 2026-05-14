@@ -12,6 +12,9 @@ import TeamCalendarScreen from "../pages/manager/hrm/team/TeamCalendarScreen";
 import ManagerSettingScreen from "../pages/manager/hrm/setting/ManagerSettingScreen";
 import TeamMembersScreen from "../pages/manager/hrm/team/TeamMembersScreen";
 import { MemberProfileScreen } from "../pages/manager/hrm/team/MemberProfileScreen";
+import SupportHubScreen from "../common/SupportHubScreen";
+import CheckoutModal from "../common/CheckoutModal";
+import CheckinModal from "../common/CheckinModal";
 
 export default function ManagerRoutes() {
     return (
@@ -21,7 +24,7 @@ export default function ManagerRoutes() {
                 <Route path="/manager/team" element={<TeamOverviewScreen />} />
                 <Route path="/manager/team-attendance" element={<TeamAttendanceScreen />} />
                 <Route path="/manager/requests" element={<RequestsScreen />} />
-                <Route path="/manager/request-details" element={<RequestDetailScreen />} />
+                <Route path="/manager/request-details/:request_id" element={<RequestDetailScreen />} />
                 <Route path="/manager/approval-history" element={<ApprovalHistoryScreen />} />
                 <Route path="/manager/insights" element={<AIInsightScreen />} />
                 <Route path="/manager/notifications" element={<NotificationScreen />} />
@@ -29,6 +32,9 @@ export default function ManagerRoutes() {
                 <Route path="/manager/settings" element={<ManagerSettingScreen />} />
                 <Route path="/manager/team-members" element={<TeamMembersScreen />} />
                 <Route path="/manager/profile" element={<MemberProfileScreen />} />
+                <Route path="/manager/ai-assistant" element={<SupportHubScreen />} />
+                <Route path="/manager/checkin" element={<CheckinModal />} />
+                <Route path="/manager/checkout" element={<CheckoutModal />} />
 
             </Route>
         </Routes>

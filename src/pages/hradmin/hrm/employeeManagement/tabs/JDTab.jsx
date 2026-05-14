@@ -1,6 +1,25 @@
-import React from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export default function JobDetailsTab() {
+  const { emp_id } = useParams();
+  const [jobInfo, setJobInfo] = useState({});
+  useEffect(() => async () => {
+    const res = await fetch(`${API_BASE_URL}/api/hradmin/employee-jobinfo/${emp_id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    })
+    const data = await res.json()
+    if (data.status === 'success') {
+      setJobInfo(data)
+    }
+  }, [emp_id])
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
       {/* LEFT: JOB FORM */}
@@ -15,13 +34,13 @@ export default function JobDetailsTab() {
 
         {/* Content */}
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Field label="Department" value="Product & Design" />
-          <Field label="Position" value="Senior Product Designer" />
-          <Field label="Job Level" value="Level 4 (Senior)" />
-          <Field label="Employment Type" value="Full-time" />
-          <Field label="Direct Manager" value="Le Thi B (NV1002)" />
-          <Field label="Work Location" value="Head Office (HCM)" />
-          <Field label="Start Date" value="10 Oct, 2021" />
+          <Field label="Department" value={jobInfo?.data?.departmentInfo?.deptName} />
+          <Field label="Position" value={jobInfo?.data?.positionInfo?.map(position => position.positionName + " ")} />
+          <Field label="Job Level" value={jobInfo?.data?.positionInfo?.map(position => position.level + " ")} />
+          <Field label="Employment Type" value={jobInfo?.data?.employmentType} />
+          <Field label="Direct Manager" value={jobInfo?.data?.managerInfo?.managerName + " - #EMP0" + jobInfo?.data?.managerInfo?.managerId} />
+          <Field label="Work Location" value={jobInfo?.data?.workLocation} />
+          <Field label="Start Date" value={jobInfo?.data?.startDate} />
 
           {/* Working Model */}
           <div>
@@ -29,9 +48,9 @@ export default function JobDetailsTab() {
               WORKING MODEL
             </label>
             <div className="flex gap-2">
-              <Tag active>Onsite</Tag>
-              <Tag>Hybrid</Tag>
-              <Tag>Remote</Tag>
+              <Tag active={jobInfo?.data?.workingModel === 'onsite'}>Onsite</Tag>
+              <Tag active={jobInfo?.data?.workingModel === 'hybrid'}>Hybrid</Tag>
+              <Tag active={jobInfo?.data?.workingModel === 'remote'}>Remote</Tag>
             </div>
           </div>
         </div>
@@ -138,10 +157,9 @@ function Tag({ children, active }) {
   return (
     <span
       className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer
-        ${
-          active
-            ? "bg-primary text-white border-primary"
-            : "bg-white border-slate-300 text-slate-600"
+        ${active
+          ? "bg-primary text-white border-primary"
+          : "bg-white border-slate-300 text-slate-600"
         }`}
     >
       {children}

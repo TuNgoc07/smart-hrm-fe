@@ -1,17 +1,36 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import JobDetailsTab from "./tabs/JDTab";
 import CompensationTab from "./tabs/CompensationTab";
 import ContractTab from "./tabs/ContractTab";
 import LifecycleTab from "./tabs/LifecycleTab";
 import FilesTab from "./tabs/FilesTab";
 
-
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export default function EmployeeDetailScreen() {
   const { emp_id } = useParams();
   const [activeTab, setActiveTab] = useState("profile");
-
+  const [employeeProfile, setEmployeeProfile] = useState({});
+  useEffect(() => async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("Không tìm thấy token");
+      return;
+    }
+    const response = await fetch(`${API_BASE_URL}/api/hradmin/employee-profile/${emp_id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'success') {
+          setEmployeeProfile(res.data.employeeInfo)
+        }
+      })
+  }, [emp_id])
+  
   const TABS = [
     { key: "profile", label: "Profile" },
     { key: "job", label: "Job Info" },
@@ -21,43 +40,11 @@ export default function EmployeeDetailScreen() {
     { key: "compensation", label: "Compensation" },
   ];
 
-  const employee = {
-    id: emp_id,
-    name: "Nguyễn Văn A",
-    code: "NV1234",
-    position: "Senior Product Designer",
-    status: "Active",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBq3GcFOTgS_aEoggqdDrQ7w_cmDaIVLPt3HIS-xYtaeXttRtMDtmIgg4CKv0iZIyze4jDXhWk18HpAceDAK4y9ldi3BQLJncy26oUsnwSiyX9p-bHcZ7pmdm9CHf1OGqxiiJJWzBdmQfYizSAHyOtb9rnj7-sTOap6wbYqYOYF5s8OsR5dPOcJvOlQq2M4Y67_g2cazbwGC7X7ovDEBGGmLUacme8w-lJOMDOWi_aAs2iXobZMcLNkBjPFVl2D-Tve-vM-7xWDq38",
-    general: {
-      dob: "15 May, 1992",
-      gender: "Male",
-      nationality: "Vietnamese",
-      marital: "Single",
-    },
-    contact: {
-      personalEmail: "nguyen.a@gmail.com",
-      workEmail: "a.nguyen@smartent.com",
-      phone: "+84 908 123 456",
-      linkedin: "/in/nguyen-a-design",
-    },
-    identification: {
-      idNumber: "001092837465",
-      issueDate: "20 Dec, 2018",
-      place: "Police Dept. of Residence",
-    },
-    address: {
-      permanent:
-        "123 Nguyen Hue St, Ward 1, District 1, Ho Chi Minh City, Vietnam",
-      current:
-        "456 Le Loi Blvd, Ward 4, District 3, Ho Chi Minh City, Vietnam",
-    },
-  };
 
   return (
     <div className="w-full px-6 lg:px-10 xl:px-14 2xl:px-16 space-y-6">
       {/* BREADCRUMB */}
-      <BreadCrumb employee={employee} />
+      <BreadCrumb employeeInfo={employeeProfile} />
 
       {/* ===== PROFILE HEADER + TABS ===== */}
       <div className="bg-white rounded-xl border overflow-hidden">
@@ -66,8 +53,8 @@ export default function EmployeeDetailScreen() {
           <div className="flex items-center gap-6">
             <div className="relative">
               <img
-                src={employee.avatar}
-                alt={employee.name}
+                src={employeeProfile.avatar}
+                alt={employeeProfile.avatar}
                 className="w-28 h-28 rounded-full object-cover border-4 border-white shadow"
               />
               <span className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full" />
@@ -76,10 +63,10 @@ export default function EmployeeDetailScreen() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-extrabold">
-                  {employee.name}
+                  {employeeProfile.employeeName}
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                  {employee.status}
+                  {employeeProfile.status}
                 </span>
               </div>
 
@@ -88,14 +75,14 @@ export default function EmployeeDetailScreen() {
                   <span className="material-symbols-outlined text-[16px]">
                     badge
                   </span>
-                  ID: {employee.code}
+                  ID: {employeeProfile.employeeId}
                 </span>
                 <span className="w-1 h-1 bg-slate-300 rounded-full" />
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">
                     work
                   </span>
-                  {employee.position}
+                  {employeeProfile.positionName}
                 </span>
               </div>
             </div>
@@ -139,28 +126,28 @@ export default function EmployeeDetailScreen() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
             <Card title="General Information" icon="person">
-              <Row label="Full Name" value={employee.name} />
-              <Row label="Date of Birth" value={employee.general.dob} />
-              <Row label="Gender" value={employee.general.gender} />
+              <Row label="Full Name" value={employeeProfile.employeeName} />
+              <Row label="Date of Birth" value={employeeProfile.birthday} />
+              <Row label="Gender" value={employeeProfile.gender} />
               <Row
                 label="Nationality"
-                value={employee.general.nationality}
+                value={employeeProfile.nationality}
               />
-              <Row label="Marital Status" value={employee.general.marital} />
+              <Row label="Marital Status" value={employeeProfile.maritalStatus} />
             </Card>
 
             <Card title="Identification" icon="id_card">
               <Row
                 label="ID / Passport No."
-                value={employee.identification.idNumber}
+                value={employeeProfile.identificationCode}
               />
               <Row
                 label="Issue Date"
-                value={employee.identification.issueDate}
+                value={employeeProfile.issueDate}
               />
               <Row
                 label="Place of Issue"
-                value={employee.identification.place}
+                value={employeeProfile.issuePlace}
               />
             </Card>
           </div>
@@ -169,22 +156,22 @@ export default function EmployeeDetailScreen() {
             <Card title="Contact Information" icon="contact_page">
               <Row
                 label="Personal Email"
-                value={employee.contact.personalEmail}
+                value={employeeProfile.personalEmail}
                 link
               />
               <Row
                 label="Work Email"
-                value={employee.contact.workEmail}
+                value={employeeProfile.workEmail}
                 link
               />
               <Row
                 label="Phone Number"
-                value={employee.contact.phone}
+                value={employeeProfile.phoneNumber}
               />
               <Row
                 label="LinkedIn"
-                value={employee.contact.linkedin}
-                link
+                value={employeeProfile.linkedln || "Not defined"}
+                link={employeeProfile.linkedln == null ? false : true}
               />
             </Card>
 
@@ -194,7 +181,7 @@ export default function EmployeeDetailScreen() {
                   Permanent Address
                 </p>
                 <p className="text-sm font-semibold">
-                  {employee.address.permanent}
+                  {employeeProfile.permanentAddress || "Undefined"}
                 </p>
               </div>
 
@@ -203,7 +190,7 @@ export default function EmployeeDetailScreen() {
                   Current Residence
                 </p>
                 <p className="text-sm font-semibold">
-                  {employee.address.current}
+                  {employeeProfile.currentAddress || "Undefined"}
                 </p>
               </div>
             </Card>
@@ -226,6 +213,7 @@ export default function EmployeeDetailScreen() {
       {activeTab == "files" && (
         <FilesTab />
       )}
+
 
 
 
@@ -269,12 +257,12 @@ function Row({ label, value, link }) {
   );
 }
 
-function BreadCrumb({ employee }) {
+function BreadCrumb({ employeeInfo }) {
   return (
     <div className="text-sm text-slate-500">
       Employees /{" "}
       <span className="font-semibold text-slate-900">
-        {employee.name}
+        {employeeInfo.employeeName}
       </span>
     </div>
   );

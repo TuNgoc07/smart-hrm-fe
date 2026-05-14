@@ -1,7 +1,18 @@
+import { useState, useEffect } from "react";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const getHeaders = () => ({
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+});
+
 export default function MyAttendanceScreen() {
     return (
         <main className="overflow-y-auto scrollbar-hide">
             <div className="space-y-8">
+                {/* <!-- Pending Explanation Requests --> */}
+                <PendingExplanationsSection />
+
                 {/* <!-- Today Attendance Card --> */}
                 <TodayAttendanceCard />
 
@@ -184,6 +195,160 @@ function AttendanceHistorySection() {
                 </div>
             </div>
         </section>
+    );
+}
+
+function PendingExplanationsSection() {
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selected, setSelected] = useState(null);
+    const [explanation, setExplanation] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    const fetchPending = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/employee/attendance-exceptions/my-pending`, { headers: getHeaders() });
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            setItems(data);
+        } catch {
+            setItems([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchPending(); }, []);
+
+    const openModal = (item) => { setSelected(item); setExplanation(""); setError(""); };
+    const closeModal = () => { setSelected(null); setExplanation(""); setError(""); };
+
+    const handleSubmit = async () => {
+        if (!explanation.trim()) { setError("Explanation cannot be empty."); return; }
+        setSubmitting(true);
+        setError("");
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/employee/attendance-exceptions/${selected.exceptionId}/submit-explanation`,
+                { method: "POST", headers: getHeaders(), body: JSON.stringify({ explanation }) }
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Submit failed");
+            setItems(prev => prev.filter(i => i.exceptionId !== selected.exceptionId));
+            closeModal();
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading || items.length === 0) return null;
+
+    const exceptionTypeLabel = (type) => type?.replace(/_/g, " ") ?? type;
+
+    return (
+        <>
+            <section className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-500/20 rounded-lg">
+                        <span className="material-symbols-outlined text-amber-600 text-xl">warning</span>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white text-sm">Action Required — Explanation Needed</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">HR has requested explanations for the following attendance records</p>
+                    </div>
+                    <span className="ml-auto px-2.5 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">{items.length}</span>
+                </div>
+                <div className="space-y-3">
+                    {items.map(item => (
+                        <div key={item.exceptionId} className="bg-white dark:bg-slate-900 rounded-xl border border-amber-100 dark:border-slate-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400 rounded uppercase">
+                                        {exceptionTypeLabel(item.exceptionType)}
+                                    </span>
+                                    <span className="text-xs text-slate-400">{item.attendanceDate}</span>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">{item.reason}</p>
+                                {item.hrComment && (
+                                    <p className="text-xs text-slate-500 italic">HR note: {item.hrComment}</p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => openModal(item)}
+                                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                                Submit Explanation
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {selected && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
+                            <div>
+                                <h2 className="font-bold text-slate-900 dark:text-white">Submit Explanation</h2>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {exceptionTypeLabel(selected.exceptionType)} • {selected.attendanceDate}
+                                </p>
+                            </div>
+                            <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3">
+                                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Reason flagged</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{selected.reason}</p>
+                                {selected.hrComment && (
+                                    <p className="text-xs text-primary mt-1">HR note: {selected.hrComment}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1.5 block">
+                                    Your Explanation
+                                </label>
+                                <textarea
+                                    value={explanation}
+                                    onChange={e => setExplanation(e.target.value)}
+                                    placeholder="Please explain the reason for this attendance exception..."
+                                    rows={5}
+                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 p-3 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                                <p className="text-right text-xs text-slate-400 mt-1">{explanation.length} chars</p>
+                            </div>
+                            {error && (
+                                <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[16px]">error</span>{error}
+                                </p>
+                            )}
+                        </div>
+                        <div className="p-6 pt-0 flex gap-3 justify-end">
+                            <button onClick={closeModal} className="px-4 py-2 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all"
+                            >
+                                {submitting ? (
+                                    <><span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>Submitting...</>
+                                ) : (
+                                    <><span className="material-symbols-outlined text-[16px]">send</span>Submit</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
 

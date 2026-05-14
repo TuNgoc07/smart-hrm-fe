@@ -1,6 +1,6 @@
 import { useState } from "react";
-import CheckinModal from "./hrm/attendance/CheckinModal";
-import CheckoutModal from "./hrm/attendance/CheckoutModal";
+import CheckinModal from "../../common/CheckinModal";
+import CheckoutModal from "../../common/CheckoutModal";
 
 export default function EmployeeHomeScreen() {
     const [showCheckinModal, setShowCheckinModal] = useState(false);

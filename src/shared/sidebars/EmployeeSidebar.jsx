@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 
 export default function EmployeeSidebar() {
     return (
-        <aside className="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-[#16222e] flex flex-col justify-between py-6">
+        <aside className="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-[#16222e] flex flex-col justify-between py-6 hidden md:block">
             <div className="fixed flex flex-col gap-8">
                 {/* <!-- Logo/Brand --> */}
                 <div className="px-6 flex items-center gap-3">
@@ -42,6 +42,10 @@ export default function EmployeeSidebar() {
                     <NavLink to="/employee/chatbot" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <span className="material-symbols-outlined">smart_toy</span>
                         <span className="text-sm font-medium">HR Chatbot</span>
+                    </NavLink>
+                    <NavLink to="/face-registration" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <span className="material-symbols-outlined">smart_toy</span>
+                        <span className="text-sm font-medium">Setting</span>
                     </NavLink>
                 </nav>
             </div>

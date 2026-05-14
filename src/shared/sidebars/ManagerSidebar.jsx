@@ -25,7 +25,7 @@ export default function ManagerSidebar() {
           <SidebarItem icon="inbox" label="Notifications / Inbox" act="notifications" navigate={navigate} />
           <SidebarItem icon="auto_awesome" label="Insights" act="insights" navigate={navigate} />
           <SidebarItem icon="settings" label="Settings" act="settings" navigate={navigate} />
-
+          <SidebarItem icon="check_in_out" label="Check-in" act="checkin" navigate={navigate} />  
         </nav>
       </div>
 

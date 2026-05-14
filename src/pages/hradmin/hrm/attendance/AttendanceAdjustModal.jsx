@@ -2,6 +2,8 @@ import { useState } from "react";
 
 export default function AttendanceAdjustModal({ data, onClose }) {
   const [action, setAction] = useState("manual");
+  const recordInfo = data.recordInfo;
+  const employeeInfo = data.employeeInfo;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
@@ -14,7 +16,7 @@ export default function AttendanceAdjustModal({ data, onClose }) {
           <div>
             <h2 className="text-xl font-bold">Attendance Adjustment</h2>
             <p className="text-sm text-slate-500">
-              {data.name} • {data.date}
+              {employeeInfo.employeeName} • {recordInfo.attendanceDate}
             </p>
           </div>
 
@@ -32,10 +34,10 @@ export default function AttendanceAdjustModal({ data, onClose }) {
           {/* EMPLOYEE INFO */}
           <Section title="Employee Information">
             <div className="grid grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border">
-              <Info label="Name" value={data.name} />
-              <Info label="Code" value={data.empId} />
-              <Info label="Department" value={data.department || "—"} />
-              <Info label="Schedule" value="General (08:00 - 17:00)" />
+              <Info label="Name" value={employeeInfo.employeeName} />
+              <Info label="Code" value={"#EMP0" + employeeInfo.employeeId} />
+              <Info label="Department" value={employeeInfo.department || "—"} />
+              <Info label="Schedule" value={"General (" + recordInfo.shiftStart + " - " + recordInfo.shiftEnd + ")"} />
             </div>
           </Section>
 
@@ -45,19 +47,19 @@ export default function AttendanceAdjustModal({ data, onClose }) {
               <SystemBox
                 icon="login"
                 label="Check-in"
-                value={data.checkIn}
+                value={recordInfo.checkin === null ? "-- (Missing)" : recordInfo.checkin}
                 color="primary"
               />
               <SystemBox
                 icon="logout"
                 label="Check-out"
-                value={data.checkOut === "MISSING" ? "-- (Missing)" : data.checkOut}
+                value={recordInfo.checkout === null ? "-- (Missing)" : recordInfo.checkout}
                 color="red"
               />
               <SystemBox
                 icon="warning"
                 label="Current Status"
-                value={data.status.toUpperCase()}
+                value={recordInfo.status.toUpperCase()}
                 color="amber"
               />
             </div>
@@ -70,17 +72,32 @@ export default function AttendanceAdjustModal({ data, onClose }) {
                 checked={action === "manual"}
                 onChange={() => setAction("manual")}
                 label="Manual Time Adjustment"
-                active
+                active={action === "manual"}
               />
-              <Radio label="Mark as Leave" />
-              <Radio label="Mark as Absent" />
-              <Radio label="Resolve Sync Error" />
+              <Radio
+                checked={action === "leave"}
+                onChange={() => setAction("leave")}
+                label="Mark as Leave"
+                active={action === "leave"}
+              />
+              <Radio
+                checked={action === "absent"}
+                onChange={() => setAction("absent")}
+                label="Mark as Absent"
+                active={action === "absent"}
+              />
+              <Radio
+                checked={action === "error"}
+                onChange={() => setAction("error")}
+                label="Resolve Sync Error"
+                active={action === "error"}
+              />
             </div>
 
             {/* TIME INPUT */}
             {action === "manual" && (
               <div className="grid grid-cols-2 gap-4">
-                <TimeInput label="Adjusted Check-in" defaultValue="08:05" />
+                <TimeInput label="Adjusted Check-in" defaultValue="08:30" />
                 <TimeInput label="Adjusted Check-out" defaultValue="17:05" />
               </div>
             )}
@@ -199,11 +216,10 @@ function SystemBox({ icon, label, value, color }) {
 function Radio({ label, checked, onChange, active }) {
   return (
     <label
-      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${
-        checked || active
-          ? "border-primary bg-primary/5"
-          : "hover:bg-slate-50"
-      }`}
+      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${checked || active
+        ? "border-primary bg-primary/5"
+        : "hover:bg-slate-50"
+        }`}
     >
       <input
         type="radio"

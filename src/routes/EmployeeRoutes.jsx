@@ -9,7 +9,8 @@ import NewRequestScreen from "../pages/employee/hrm/materials/NewRequestScreen";
 import RequestDetailScreen from "../pages/employee/hrm/materials/RequestDetailScreen";
 import MyPayslipScreen from "../pages/employee/hrm/materials/MyPayslipScreen";
 import NotificationScreen from "../pages/employee/hrm/notification/NotificationScreen";
-import ChatbotScreen from "../pages/employee/hrm/intelligence/ChatbotScreen";
+import FaceRegistrationScreen from "../common/FaceRegistrationScreen";
+import SupportHubScreen from "../common/SupportHubScreen";
 
 export function EmployeeRoutes() {
     return (
@@ -24,7 +25,9 @@ export function EmployeeRoutes() {
                 <Route path="/employee/request-details" element={<RequestDetailScreen />} />
                 <Route path="/employee/my-payslip" element={<MyPayslipScreen />} />
                 <Route path="/employee/notifications" element={<NotificationScreen />} />
-                <Route path="/employee/chatbot" element={<ChatbotScreen />} />
+                <Route path="/employee/ai-assistant" element={<SupportHubScreen />} />
+                <Route path="/face-registration" element={<FaceRegistrationScreen />} />
+
             </Route>
         </Routes>
     )

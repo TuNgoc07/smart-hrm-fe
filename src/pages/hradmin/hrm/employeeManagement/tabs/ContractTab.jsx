@@ -1,6 +1,26 @@
 import React from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export default function ContractTab() {
+  const { emp_id } = useParams();
+  const [contractsInfo, setContractsInfo] = useState([]);
+  useEffect(() => async () => {
+    const res = await fetch(`${API_BASE_URL}/api/hradmin/employee-contracts/${emp_id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    })
+    const data = await res.json()
+    if (data.status === 'success') {
+      setContractsInfo(data.data)
+    }
+  }, [emp_id])
+
   return (
     <div className="space-y-6 mt-6">
       {/* ===== WARNING BANNER ===== */}
@@ -28,20 +48,24 @@ export default function ContractTab() {
         <div className="flex flex-wrap gap-x-12 gap-y-6">
           <OverviewItem
             label="Employment Status"
-            value="Full-time"
+            value={(contractsInfo[0]?.employmentStatus || "").replace(/_/g, " ")
+              .replace(/\b\w/g, c => c.toUpperCase())}
             badge="Valid"
           />
+
           <OverviewItem
             label="Latest Contract ID"
-            value="CT-10293"
+            value={"CT - 0" + contractsInfo[0]?.contractId || ""}
           />
+
           <OverviewItem
             label="Effective Date"
-            value="Jan 01, 2023"
+            value={contractsInfo[0]?.startDate || ""}
           />
+
           <OverviewItem
             label="Salary Tier"
-            value="Tier 3 (Design Ops)"
+            value={contractsInfo[0]?.salaryTier || ""}
           />
         </div>
       </Card>
@@ -60,7 +84,7 @@ export default function ContractTab() {
         }
         noPadding
       >
-        <ContractTable />
+        <ContractTable contracts={contractsInfo} />
       </Card>
     </div>
   );
@@ -103,7 +127,7 @@ function OverviewItem({ label, value, badge }) {
   );
 }
 
-function ContractTable() {
+function ContractTable({ contracts }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
@@ -119,33 +143,15 @@ function ContractTable() {
         </thead>
 
         <tbody>
-          {/* ACTIVE */}
-          <tr className="bg-blue-50/50 border-l-4 border-primary">
-            <td className="px-6 py-4 font-bold">Fixed-term</td>
-            <td className="px-6 py-4 text-slate-500">Jan 01, 2023</td>
-            <td className="px-6 py-4 text-slate-500">Oct 31, 2024</td>
-            <td className="px-6 py-4">
-              <Status active />
-            </td>
-            <td className="px-6 py-4 text-center">
-              <PdfButton />
-            </td>
-            <td className="px-6 py-4 text-right">
-              <ActionButtons active />
-            </td>
-          </tr>
+          {contracts.map((contract) =>
+            contract.contractStatus === 'active'
+              ? <ActiveRow key={contract.contractId} contract={contract} />
+              : <ExpiredRow key={contract.contractId} contract={contract} />
+          )}
 
-          {/* EXPIRED */}
-          <ExpiredRow
-            type="Official"
-            start="Jan 01, 2022"
-            end="Dec 31, 2022"
-          />
-          <ExpiredRow
-            type="Probation"
-            start="Oct 12, 2021"
-            end="Dec 31, 2021"
-          />
+
+
+
         </tbody>
       </table>
     </div>
@@ -155,14 +161,11 @@ function ContractTable() {
 function Status({ active }) {
   return (
     <span
-      className={`flex items-center gap-1.5 font-bold ${
-        active ? "text-blue-600" : "text-slate-500"
-      }`}
+      className={`flex items-center gap-1.5 font-bold ${active ? "text-blue-600" : "text-slate-500"}`}
     >
       <span
-        className={`w-1.5 h-1.5 rounded-full ${
-          active ? "bg-blue-600" : "bg-slate-300"
-        }`}
+        className={`w-1.5 h-1.5 rounded-full ${active ? "bg-blue-600" : "bg-slate-300"
+          }`}
       />
       {active ? "Active" : "Expired"}
     </span>
@@ -199,14 +202,14 @@ function ActionButtons({ active }) {
   );
 }
 
-function ExpiredRow({ type, start, end }) {
+function ExpiredRow({ contract }) {
   return (
     <tr className="border-t hover:bg-slate-50">
-      <td className="px-6 py-4 font-bold">{type}</td>
-      <td className="px-6 py-4 text-slate-500">{start}</td>
-      <td className="px-6 py-4 text-slate-500">{end}</td>
+      <td className="px-6 py-4 font-bold">{contract.contractType}</td>
+      <td className="px-6 py-4 text-slate-500">{contract.startDate}</td>
+      <td className="px-6 py-4 text-slate-500">{contract.endDate || "-"}</td>
       <td className="px-6 py-4">
-        <Status />
+        <Status active={contract.contractStatus === 'active'} />
       </td>
       <td className="px-6 py-4 text-center">
         <PdfButton />
@@ -218,4 +221,24 @@ function ExpiredRow({ type, start, end }) {
       </td>
     </tr>
   );
+}
+
+function ActiveRow({ contract }) {
+  return (
+    <tr className="bg-blue-50/50 border-l-4 border-primary">
+      <td className="px-6 py-4 font-bold">{contract.contractType}</td>
+      <td className="px-6 py-4 text-slate-500">{contract.startDate}</td>
+      <td className="px-6 py-4 text-slate-500 text-center">{contract.endDate || "-"}</td>
+      <td className="px-6 py-4">
+        <Status active={contract.contractStatus === 'active'} />
+      </td>
+      <td className="px-6 py-4 text-center">
+        <PdfButton />
+      </td>
+      <td className="px-6 py-4 text-right">
+        <ActionButtons active />
+      </td>
+    </tr>
+  );
+
 }

@@ -1,16 +1,56 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { fetchUnreadCount } from '../../services/notificationService';
+
+const POLL_INTERVAL = 30000;
+
 export default function EmployeeHeader() {
+    const navigate = useNavigate();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+
+    useEffect(() => {
+        const loadCount = async () => {
+            try {
+                const data = await fetchUnreadCount();
+                setUnreadCount(data.count ?? 0);
+            } catch {
+                // silently ignore — badge simply won't show
+            }
+        };
+        loadCount();
+        const interval = setInterval(loadCount, POLL_INTERVAL);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
-        <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white/80 dark:bg-[#16222e]/80 backdrop-blur-md border-b border-[#e7edf3] dark:border-slate-800">
+        <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 dark:bg-[#16222e]/80 backdrop-blur-md border-b border-[#e7edf3] dark:border-slate-800">
             <div className="flex items-center gap-2">
+                {/* Mobile menu button */}
+                <button 
+                    onClick={toggleMobileMenu}
+                    className="md:hidden p-2 text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                >
+                    <span className="material-symbols-outlined">menu</span>
+                </button>
                 <span className="text-sm text-[#4c739a] font-medium">Employee Dashboard</span>
             </div>
             <div className="flex items-center gap-4">
-                <button className="relative p-2 text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                <button
+                    onClick={() => navigate('/employee/notifications')}
+                    className="relative p-2 text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                >
                     <span className="material-symbols-outlined">notifications</span>
-                    <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                    </span>
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                        </span>
+                    )}
                 </button>
                 <div className="flex items-center gap-3 pl-4 border-l border-[#e7edf3] dark:border-slate-800 cursor-pointer">
                     <div className="text-right hidden sm:block">

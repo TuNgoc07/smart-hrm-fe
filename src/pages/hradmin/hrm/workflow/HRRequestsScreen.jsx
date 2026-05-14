@@ -1,11 +1,32 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 /* ================= MAIN SCREEN ================= */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
 
 export default function HRRequestsScreen() {
-  const [requests] = useState(mockRequests);
+  const [requests, setRequests] = useState([]);
   const navigate = useNavigate();
+  useEffect(() => {
+    const request = async () => {
+      const response = await fetch(`${API_BASE_URL}/api/hradmin/requests`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      console.log(JSON.stringify(data));
+      setRequests(data);
+    };
+    request();
+  }, [])
+
+
+  function handleSelected(request) {
+    navigate(`/hr/request-details/${request?.requestInfo?.requestId}`);
+  }
 
   return (
     <div className="space-y-6">
@@ -14,7 +35,7 @@ export default function HRRequestsScreen() {
 
       <FilterBar />
 
-      <RequestsTable data={requests} navigate = {navigate}  />
+      <RequestsTable requests={requests} onSelected={handleSelected} />
 
     </div>
   );
@@ -44,11 +65,10 @@ function PageHeader({ total }) {
 function Btn({ icon, label, primary }) {
   return (
     <button
-      className={`flex items-center gap-2 px-4 h-10 rounded-lg text-sm font-bold ${
-        primary
-          ? "bg-primary text-white"
-          : "bg-slate-100 text-slate-700"
-      }`}
+      className={`flex items-center gap-2 px-4 h-10 rounded-lg text-sm font-bold ${primary
+        ? "bg-primary text-white"
+        : "bg-slate-100 text-slate-700"
+        }`}
     >
       <span className="material-symbols-outlined text-lg">{icon}</span>
       {label}
@@ -99,7 +119,7 @@ function Filter({ label, value }) {
 
 /* ================= TABLE ================= */
 
-function RequestsTable({ data , navigate}) {
+function RequestsTable({ requests, onSelected }) {
   return (
     <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
       <table className="w-full text-left">
@@ -117,8 +137,8 @@ function RequestsTable({ data , navigate}) {
         </thead>
 
         <tbody className="divide-y">
-          {data.map((row) => (
-            <RequestRow key={row.id} data={row} navigate = {navigate} />
+          {requests?.map((request, index) => (
+            <RequestRow key={request.requestInfo.requestId || index} request={request} onSelected={onSelected} />
           ))}
         </tbody>
       </table>
@@ -126,39 +146,39 @@ function RequestsTable({ data , navigate}) {
   );
 }
 
-function RequestRow({ data , navigate}) {
+function RequestRow({ request, onSelected }) {
   return (
     <tr className="hover:bg-slate-50">
-      <Td bold>{data.id}</Td>
+      <Td bold>{request.requestInfo.requestCode}</Td>
 
       <Td>
         <div className="flex items-center gap-3">
-          <img src={data.avatar} className="w-8 h-8 rounded-full" />
-          <span className="font-semibold">{data.employee}</span>
+          <img src={request?.employeeInfo?.employeeAvatarUrl} className="w-8 h-8 rounded-full" />
+          <span className="font-semibold">{request?.employeeInfo?.employeeFullName}</span>
         </div>
       </Td>
 
       <Td>
-        <TypeBadge type={data.type} />
+        <TypeBadge type={request?.requestInfo?.workflowType} />
       </Td>
 
-      <Td className="text-slate-500">{data.date}</Td>
-      <Td>{data.step}</Td>
+      <Td className="text-slate-500">{request?.requestInfo?.submittedAt}</Td>
+      <Td>{request?.currentStepNumber || 1}</Td>
 
       <Td>
-        <StatusBadge status={data.status} />
+        <StatusBadge status={request?.requestInfo?.status} />
       </Td>
 
       <Td>
-        <span className={data.sla.includes("Overdue") ? "text-red-500 font-bold" : "text-slate-500"}>
-          {data.sla}
+        <span className={request?.sla?.includes("Overdue") ? "text-red-500 font-bold" : "text-slate-500"}>
+          {request?.sla}
         </span>
       </Td>
 
       <Td right>
         <button
-        onClick = { () => {navigate(`/hr/request-details/${data.id}`)}} 
-        className="p-1 text-primary hover:bg-slate-100 rounded">
+          onClick={() => onSelected(request)}
+          className="p-1 text-primary hover:bg-slate-100 rounded">
           <span className="material-symbols-outlined">visibility</span>
         </button>
       </Td>
@@ -170,30 +190,46 @@ function RequestRow({ data , navigate}) {
 
 function StatusBadge({ status }) {
   const map = {
-    Pending: "bg-amber-100 text-amber-700",
-    "In Progress": "bg-blue-100 text-blue-700",
-    Approved: "bg-green-100 text-green-700",
-    Rejected: "bg-red-100 text-red-700",
+    approved: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+    in_progress: "bg-blue-100 text-blue-700",
+    pending: "bg-amber-100 text-amber-700",
+    completed: "bg-green-100 text-green-700",
+    cancelled: "bg-slate-100 text-slate-700",
   };
 
+  const statusLower = status?.toLowerCase() || "pending";
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${map[status]}`}>
+    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${map[statusLower] || map.pending}`}>
       {status}
     </span>
   );
 }
 
 function TypeBadge({ type }) {
-  const icons = {
-    Leave: "flight_takeoff",
-    OT: "schedule",
-    Transfer: "move_down",
-  };
+  const typeLower = type?.toLowerCase() || "";
+
+  const typeConfig = [
+    { keywords: ["leave"], icon: "flight_takeoff", color: "bg-purple-100 text-purple-700" },
+    { keywords: ["ot", "overtime"], icon: "schedule", color: "bg-orange-100 text-orange-700" },
+    { keywords: ["transfer"], icon: "move_down", color: "bg-blue-100 text-blue-700" },
+    { keywords: ["salary", "increase"], icon: "trending_up", color: "bg-green-100 text-green-700" },
+    { keywords: ["expense", "claim"], icon: "receipt_long", color: "bg-amber-100 text-amber-700" },
+    { keywords: ["training"], icon: "school", color: "bg-cyan-100 text-cyan-700" },
+    { keywords: ["promotion"], icon: "workspace_premium", color: "bg-pink-100 text-pink-700" },
+  ];
+
+  const matchedConfig = typeConfig.find(config =>
+    config.keywords.some(keyword => typeLower.includes(keyword))
+  );
+
+  const colorClass = matchedConfig?.color || "bg-slate-100 text-slate-700";
+  const icon = matchedConfig?.icon || "description";
 
   return (
-    <span className="flex items-center gap-2 bg-slate-100 px-2 py-1 rounded text-sm">
+    <span className={`flex items-center gap-2 ${colorClass} px-2 py-1 rounded text-sm`}>
       <span className="material-symbols-outlined text-[18px]">
-        {icons[type]}
+        {icon}
       </span>
       {type}
     </span>

@@ -20,8 +20,8 @@ import PayrollCalculationScreen from "../pages/hradmin/hrm/payhub/PayrollCalcula
 import PayrollResultScreen from "../pages/hradmin/hrm/payhub/PayrollResultScreen";
 import PayrollConfigurationScreen from "../pages/hradmin/hrm/payhub/PayrollConfigurationScreen";
 import AIInsightsDashboard from "../pages/hradmin/hrm/intelligence/insights/AIInsightScreen";
-import SupportHubScreen from "../pages/hradmin/hrm/intelligence/assistance/SupportHubScreen";
 import AutomationRulesScreen from "../pages/hradmin/hrm/intelligence/automation/AutomationRuleScreen";
+import SupportHubScreen from "../common/SupportHubScreen";
 
 export default function HRAdminRoutes(){
     return (

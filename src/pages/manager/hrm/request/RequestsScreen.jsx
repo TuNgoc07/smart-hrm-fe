@@ -93,7 +93,7 @@ export default function RequestsScreen() {
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {actionReq.map((req) => (
-              <ActionRequiredCard key={req.requestId} req={req} />
+              <ActionRequiredCard key={req.requestId} req={req} navigate={navigate} />
             ))}
           </div>
         </div>
@@ -208,7 +208,7 @@ function KPICard({ title, amount, note, danger, highlight }) {
   );
 }
 
-function ActionRequiredCard({ req }) {
+function ActionRequiredCard({ req, navigate }) {
   return (
     <div className="rounded-lg bg-red-50 border border-red-100 flex px-6 py-5 items-center gap-3">
       <Avatar name={req.name} avatarUrl={req.avatarUrl} size={9} />
@@ -220,11 +220,11 @@ function ActionRequiredCard({ req }) {
         {req.summary && <p className="text-xs text-slate-500 mt-0.5 truncate max-w-xs">{req.summary}</p>}
       </div>
       <div className="flex gap-2 shrink-0">
-        <button className="bg-red-500 flex items-center gap-1 px-3 py-1.5 text-white text-xs font-bold rounded-lg hover:brightness-90 transition-all">
-          <span className="material-symbols-outlined text-sm">close</span>Reject
-        </button>
-        <button className="flex items-center gap-1 px-3 py-1.5 bg-[#2ccb5e] text-white text-xs font-bold rounded-lg hover:brightness-90 transition-all">
-          <span className="material-symbols-outlined text-sm">check</span>Approve
+        <button
+          onClick={() => navigate(`/manager/request-details/${req.requestId}`)}
+          className="bg-primary flex items-center gap-1 px-3 py-1.5 text-white text-xs font-bold rounded-lg hover:brightness-90 transition-all"
+        >
+          <span className="material-symbols-outlined text-sm">visibility</span>Review
         </button>
       </div>
     </div>
@@ -278,11 +278,8 @@ function RequestRow({ req, navigate }) {
       {/* Actions */}
       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-2">
-          <button className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">
-            Reject
-          </button>
-          <button className="px-3 py-1.5 bg-[#2ccb5e] text-white text-xs font-bold rounded-lg hover:bg-green-600 transition-colors">
-            Approve
+          <button className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors">
+            Review
           </button>
         </div>
       </td>

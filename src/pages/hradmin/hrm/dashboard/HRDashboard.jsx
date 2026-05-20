@@ -67,11 +67,12 @@ function KpiSection({ dashboard }) {
       badgeIcon: "trending_up",
     },
     {
-      title: "New / Resigned",
+      title: "New / Resigned / Inactive",
       value: (
         <>
           {dashboard?.newEmployee ?? 0} <span className="text-lg text-slate-300">/</span>{" "}
-          <span className="text-red-500 text-2xl">{dashboard?.resignedEmployees ?? 0}</span>
+          <span className="text-red-500 text-2xl">{dashboard?.resignedEmployees ?? 0}</span> <span className="text-lg text-slate-300">/</span>{" "}
+          <span className="text-amber-600 text-2xl">{dashboard?.inactiveEmployees ?? 0}</span>
         </>
       ),
       icon: "person_add_disabled",

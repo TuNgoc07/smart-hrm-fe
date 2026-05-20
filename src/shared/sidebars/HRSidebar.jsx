@@ -2,7 +2,8 @@ import { useState } from "react";
 import { NavLink,useNavigate } from "react-router-dom";
 
 export default function HRSidebar() {
-  const [openHR, setOpenHR] = useState(false); // mở sẵn cho giống design\
+  const [openEmployee, setOpenEmployee] = useState(false);
+  const [openPayroll, setOpenPayroll] = useState(false);
   const [openIntelligence, setIntelligence] = useState(false);
 
   const navigate = useNavigate();
@@ -17,87 +18,120 @@ export default function HRSidebar() {
       {/* Menu */}
       <nav className="flex-1 px-4 space-y-2 text-sm">
         {/* Home */}
-        <NavLink to ="/hr/home" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-bold">
-          <span className="material-symbols-outlined text-lg">grid_view</span>
+        <NavLink to="/hr/home" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg font-semibold ${isActive ? "bg-primary/10 text-primary" : "hover:bg-slate-100"}`}>
+          <span className="material-symbols-outlined text-lg">home</span>
           Home
         </NavLink>
 
-        {/* HR Management */}
+        {/* Dashboard */}
+        <NavLink to="/hr/dashboard" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg font-semibold ${isActive ? "bg-primary/10 text-primary" : "hover:bg-slate-100"}`}>
+          <span className="material-symbols-outlined text-lg">dashboard</span>
+          Dashboard
+        </NavLink>
+
+        {/* Employee Management */}
         <div>
           <button
-            onClick={() => setOpenHR(!openHR)}
+            onClick={() => setOpenEmployee(!openEmployee)}
             className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 font-semibold"
           >
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-lg">
-                groups
-              </span>
-              HR Management
+              <span className="material-symbols-outlined text-lg">people</span>
+              Employee Management
             </div>
-
-            <span
-              className={`material-symbols-outlined text-sm transition-transform ${
-                openHR ? "rotate-180" : ""
-              }`}
-            >
+            <span className={`material-symbols-outlined text-sm transition-transform ${openEmployee ? "rotate-180" : ""}`}>
               expand_more
             </span>
           </button>
-
-          {/* Dropdown */}
-          <div
-            className={`ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${
-              openHR ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <NavLink to="/hr/dashboard" className="block px-3 py-1.5 rounded-md text-primary font-semibold bg-primary/10">
-              Dashboard
+          <div className={`ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${openEmployee ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <NavLink to="/hr/employee-list" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">person</span>
+              Employee List
             </NavLink>
-            <NavLink to="/hr/employee-list" className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
-              Employee
-            </NavLink>
-            <NavLink to="/hr/attendance" className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
-              Attendance
-            </NavLink>
-            <NavLink to="/hr/workflow-statistic" className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
-              Workflow
-            </NavLink>
-            <NavLink to='/hr/payroll-overview' className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
-              Payroll
-            </NavLink>
-            <NavLink to='/hr/department-list' className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
+            <NavLink to="/hr/department-list" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">corporate_fare</span>
               Department
             </NavLink>
-            <NavLink to='/hr/position-list' className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
+            <NavLink to="/hr/position-list" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">badge</span>
               Position
             </NavLink>
-            <NavLink to='/hr/contract-list' className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100">
+            <NavLink to="/hr/contract-list" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">description</span>
               Contracts
-            </NavLink>               
+            </NavLink>
           </div>
         </div>
 
-        {/* Recruitment */}
+        {/* Attendance */}
+        <NavLink to="/hr/attendance" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg font-semibold ${isActive ? "bg-primary/10 text-primary" : "hover:bg-slate-100"}`}>
+          <span className="material-symbols-outlined text-lg">schedule</span>
+          Attendance
+        </NavLink>
+
+        {/* Workflow */}
+        <NavLink to="/hr/workflow-statistic" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg font-semibold ${isActive ? "bg-primary/10 text-primary" : "hover:bg-slate-100"}`}>
+          <span className="material-symbols-outlined text-lg">assignment</span>
+          Workflow
+        </NavLink>
+
+        {/* Payroll */}
+        <div>
+          <button
+            onClick={() => setOpenPayroll(!openPayroll)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 font-semibold"
+          >
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-lg">payments</span>
+              Payroll
+            </div>
+            <span className={`material-symbols-outlined text-sm transition-transform ${openPayroll ? "rotate-180" : ""}`}>
+              expand_more
+            </span>
+          </button>
+          <div className={`ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${openPayroll ? "max-h-[700px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <NavLink to="/hr/payroll-overview" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">assessment</span>
+              Payroll Overview
+            </NavLink>
+            <NavLink to="/hr/payroll-calculation" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">calculate</span>
+              Payroll Calculation
+            </NavLink>
+            <NavLink to="/hr/payroll-results" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">receipt_long</span>
+              Payroll Results
+            </NavLink>
+            <NavLink to="/hr/payslip-history" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">history</span>
+              Payslip History
+            </NavLink>
+            <NavLink to="/hr/payroll-config" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">settings</span>
+              Payroll Configuration
+            </NavLink>
+            <NavLink to="/hr/holiday-calendar" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">event</span>
+              Holiday Calendar
+            </NavLink>
+          </div>
+        </div>
+
+        {/* Recruitment ATS */}
         <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 font-semibold">
-          <span className="material-symbols-outlined text-lg">
-            work_history
-          </span>
+          <span className="material-symbols-outlined text-lg">work_history</span>
           Recruitment ATS
         </a>
 
         {/* Reports */}
         <a className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 font-semibold">
-          <span className="material-symbols-outlined text-lg">
-            analytics
-          </span>
+          <span className="material-symbols-outlined text-lg">analytics</span>
           Reports
         </a>
-        <NavLink
-        to="/hr/org-chart"
-        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 font-semibold">
-          <span className="material-symbols-outlined text-lg">
-            account_tree
-          </span>
+
+        {/* Org Chart */}
+        <NavLink to="/hr/org-chart" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg font-semibold ${isActive ? "bg-primary/10 text-primary" : "hover:bg-slate-100"}`}>
+          <span className="material-symbols-outlined text-lg">account_tree</span>
           Org Chart
         </NavLink>
 
@@ -124,30 +158,19 @@ export default function HRSidebar() {
           </button>
 
           {/* Dropdown */}
-          <div
-            className={`ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${
-              openIntelligence ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <NavLink to="/hr/ai-insights" className="block px-3 py-1.5 rounded-md text-primary font-semibold bg-primary/10 flex items-center">
-              <span className="material-symbols-outlined text-lg mr-1">
-              psychology
-              </span> 
+          <div className={`ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${openIntelligence ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <NavLink to="/hr/ai-insights" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-1">psychology</span>
               Insights
             </NavLink>
-            <NavLink to="/hr/ai-assistant" className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100 flex items-center">
-              <span className="material-symbols-outlined text-lg mr-1">
-                smart_toy
-              </span>  
+            <NavLink to="/hr/ai-assistant" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-1">smart_toy</span>
               Assistant
             </NavLink>
-            <NavLink to="/hr/automation-rules" className="block px-3 py-1.5 rounded-md text-slate-600 hover:text-primary hover:bg-slate-100 flex items-center">
-              <span className="material-symbols-outlined text-lg mr-1">
-                settings_suggest
-              </span>  
+            <NavLink to="/hr/automation-rules" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-1">settings_suggest</span>
               Automation Rules
             </NavLink>
-                         
           </div>
         </div>
         

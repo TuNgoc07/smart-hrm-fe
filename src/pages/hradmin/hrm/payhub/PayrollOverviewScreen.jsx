@@ -177,7 +177,7 @@ export default function PayrollOverviewScreen() {
     return (
       <section className="xl:col-span-5  overflow-hidden">
         <div className="px-6 py-4 flex items-center">
-          <span class="material-symbols-outlined text-blue-400 mr-2">auto_awesome</span>
+          <span className="material-symbols-outlined text-blue-400 mr-2">auto_awesome</span>
           <h2 className="font-bold">AI Payroll Insights </h2>
           
         </div>
@@ -209,16 +209,16 @@ export default function PayrollOverviewScreen() {
 
   function InsightCard ({title, desc, icon, tips}){
     return (
-      <div class="flex xl:col-span-4 gap-5 p-7 rounded-xl border border-[#dbe0e6] dark:border-gray-800 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-900/10 shadow-sm">
-        <div class="size-10 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary">
-          <span class="material-symbols-outlined">{icon}</span>
+      <div className="flex xl:col-span-4 gap-5 p-7 rounded-xl border border-[#dbe0e6] dark:border-gray-800 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-900 dark:to-blue-900/10 shadow-sm">
+        <div className="size-10 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary">
+          <span className="material-symbols-outlined">{icon}</span>
         </div>
-        <div class="flex flex-col gap-1">
-          <p class="text-xs font-bold text-[#617589] uppercase tracking-wider">{title}</p> 
-          <p class="text-sm font-semibold text-[#111418] dark:text-gray-200">{desc}</p>
-          <div class="flex items-center gap-1.5 mt-1">
-            <span class="material-symbols-outlined text-[14px] text-primary/60">{icon}</span>
-            <p class="text-[11px] text-[#617589] dark:text-gray-400">{tips}</p>
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-bold text-[#617589] uppercase tracking-wider">{title}</p> 
+          <p className="text-sm font-semibold text-[#111418] dark:text-gray-200">{desc}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="material-symbols-outlined text-[14px] text-primary/60">{icon}</span>
+            <p className="text-[11px] text-[#617589] dark:text-gray-400">{tips}</p>
           </div>
         </div>
       </div>

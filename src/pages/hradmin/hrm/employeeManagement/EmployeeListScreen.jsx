@@ -69,6 +69,7 @@ function FilterBar({ searchInput, onSearchChange, filterOptions, filters, onFilt
     { id: null, name: "All Statuses" },
     { id: "active", name: "Active" },
     { id: "inactive", name: "Inactive" },
+    { id: "terminated", name: "Terminated" },
   ];
   const typeOptions = [
     { id: null, name: "All Types" },
@@ -116,7 +117,7 @@ function FilterBar({ searchInput, onSearchChange, filterOptions, filters, onFilt
 }
 
 // ─── TABLE ────────────────────────────────────────────────────────────────────
-function EmployeesTable({ employees, openMenuIndex, onMenuToggle, navigate, onDeactivate, isLoading, page, totalPages, totalElements, pageSize, onPageChange }) {
+function EmployeesTable({ employees, openMenuIndex, onMenuToggle, navigate, onDeactivate, onResign, isLoading, page, totalPages, totalElements, pageSize, onPageChange }) {
   const start = totalElements === 0 ? 0 : page * pageSize + 1;
   const end = Math.min((page + 1) * pageSize, totalElements);
   const maxButtons = Math.min(totalPages, 7);
@@ -219,6 +220,8 @@ function EmployeesTable({ employees, openMenuIndex, onMenuToggle, navigate, onDe
                     className={`px-3 py-1 rounded-md text-xs font-bold capitalize ${
                       emp?.employeeInfo?.status === "active"
                         ? "bg-green-100 text-green-700"
+                        : emp?.employeeInfo?.status === "terminated"
+                        ? "bg-red-100 text-red-700"
                         : "bg-slate-100 text-slate-600 border"
                     }`}
                   >
@@ -267,6 +270,17 @@ function EmployeesTable({ employees, openMenuIndex, onMenuToggle, navigate, onDe
                             {emp?.employeeInfo?.status === "active" ? "Deactivate" : "Reactivate"}
                           </button>
                         </li>
+                        {emp?.employeeInfo?.status !== "terminated" && (
+                          <li>
+                            <button
+                              className="w-full px-4 py-2 flex items-center gap-3 text-red-600 hover:bg-red-50"
+                              onClick={() => onResign(emp?.employeeInfo?.employeeId)}
+                            >
+                              <span className="material-symbols-outlined">person_remove</span>
+                              Mark as Terminated
+                            </button>
+                          </li>
+                        )}
                       </ul>
                     </div>
                   )}
@@ -368,6 +382,7 @@ export default function EmployeeListScreen() {
       .then((r) => r.json())
       .then((d) => {
         if (d?.data) {
+          console.log(JSON.stringify(d.data));
           setEmployees(d.data.content || []);
           setTotalElements(d.data.totalElements || 0);
           setPageSize(d.data.size || 10);
@@ -392,8 +407,29 @@ export default function EmployeeListScreen() {
   async function handleDeactivate(empId) {
     if (!empId) return;
     const token = localStorage.getItem("token");
+    const employee = employees.find(e => e?.employeeInfo?.employeeId === empId);
+    const currentStatus = employee?.employeeInfo?.status || "active";
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
     try {
-      const res = await fetch(`${API_BASE_URL}/api/hradmin/employees/${empId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/employees/${empId}/status/${newStatus}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data?.data) {
+        setEmployees((prev) => prev.map((e) => e?.employeeInfo?.employeeId === empId ? data.data : e));
+        fetch(`${API_BASE_URL}/api/hradmin/employees/count-active`, { headers: { Authorization: `Bearer ${token}` } })
+          .then((r) => r.json()).then((d) => { if (d?.data !== undefined) setActiveCount(d.data); });
+      }
+    } catch (e) { console.error(e); }
+    setOpenMenuIndex(null);
+  }
+
+  async function handleResign(empId) {
+    if (!empId) return;
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/employees/${empId}/status/terminated`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -436,6 +472,7 @@ export default function EmployeeListScreen() {
         onMenuToggle={(i) => setOpenMenuIndex(openMenuIndex === i ? null : i)}
         navigate={navigate}
         onDeactivate={handleDeactivate}
+        onResign={handleResign}
         isLoading={isLoading}
         page={page}
         totalPages={totalPages}

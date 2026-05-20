@@ -1,14 +1,17 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import NewContractModal from "../NewContractModal";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 export default function ContractTab() {
   const { emp_id } = useParams();
   const [contractsInfo, setContractsInfo] = useState([]);
-  useEffect(() => async () => {
-    const res = await fetch(`${API_BASE_URL}/api/hradmin/employee-contracts/${emp_id}`, {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchContracts = async () => {
+    const res = await fetch(`${API_BASE_URL}/api/hradmin/contracts/employee/${emp_id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -19,7 +22,32 @@ export default function ContractTab() {
     if (data.status === 'success') {
       setContractsInfo(data.data)
     }
-  }, [emp_id])
+  };
+
+  useEffect(() => {
+    fetchContracts();
+  }, [emp_id]);
+
+  const handleTerminate = async (contractId) => {
+    if (!window.confirm('Are you sure you want to terminate this contract? This will expire the compensation plan and set the employee to inactive.')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/contracts/${contractId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        fetchContracts();
+      } else {
+        alert(data.message || 'Failed to terminate contract');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6 mt-6">
@@ -75,7 +103,10 @@ export default function ContractTab() {
         title="Contract History"
         icon="history"
         action={
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90"
+          >
             <span className="material-symbols-outlined text-[16px]">
               add
             </span>
@@ -84,8 +115,15 @@ export default function ContractTab() {
         }
         noPadding
       >
-        <ContractTable contracts={contractsInfo} />
+        <ContractTable contracts={contractsInfo} onTerminate={handleTerminate} />
       </Card>
+
+      <NewContractModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        employeeId={emp_id}
+        onSuccess={fetchContracts}
+      />
     </div>
   );
 }
@@ -127,7 +165,7 @@ function OverviewItem({ label, value, badge }) {
   );
 }
 
-function ContractTable({ contracts }) {
+function ContractTable({ contracts, onTerminate }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
@@ -145,7 +183,7 @@ function ContractTable({ contracts }) {
         <tbody>
           {contracts.map((contract) =>
             contract.contractStatus === 'active'
-              ? <ActiveRow key={contract.contractId} contract={contract} />
+              ? <ActiveRow key={contract.contractId} contract={contract} onTerminate={() => onTerminate(contract.contractId)} />
               : <ExpiredRow key={contract.contractId} contract={contract} />
           )}
 
@@ -182,7 +220,7 @@ function PdfButton() {
   );
 }
 
-function ActionButtons({ active }) {
+function ActionButtons({ active, onTerminate }) {
   return (
     <div className="flex justify-end gap-2">
       <button className="text-slate-500 hover:text-primary text-xs font-bold px-2 py-1 rounded">
@@ -193,7 +231,10 @@ function ActionButtons({ active }) {
           <button className="text-primary border border-primary/20 hover:bg-primary/10 text-xs font-bold px-2 py-1 rounded">
             Extend
           </button>
-          <button className="text-red-500 hover:bg-red-50 text-xs font-bold px-2 py-1 rounded">
+          <button
+            className="text-red-500 hover:bg-red-50 text-xs font-bold px-2 py-1 rounded"
+            onClick={onTerminate}
+          >
             End
           </button>
         </>
@@ -223,7 +264,7 @@ function ExpiredRow({ contract }) {
   );
 }
 
-function ActiveRow({ contract }) {
+function ActiveRow({ contract, onTerminate }) {
   return (
     <tr className="bg-blue-50/50 border-l-4 border-primary">
       <td className="px-6 py-4 font-bold">{contract.contractType}</td>
@@ -236,9 +277,8 @@ function ActiveRow({ contract }) {
         <PdfButton />
       </td>
       <td className="px-6 py-4 text-right">
-        <ActionButtons active />
+        <ActionButtons active onTerminate={onTerminate} />
       </td>
     </tr>
   );
-
 }

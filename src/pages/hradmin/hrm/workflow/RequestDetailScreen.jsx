@@ -38,20 +38,20 @@ export default function HRRequestDetailScreen() {
       },
       body: JSON.stringify({ decision: "APPROVED", comment }),
     });
- 
+
     if (!response.ok) {
       const data = await response.json();
       setError(data.errorContent || "An unexpected error occurred.");
       return;
     }
- 
-    setSuccess("Request approved successfully!"); // ← thêm
+
+    setSuccess("Request approved. Attendance record will be updated automatically.");
     // refresh request data after successful action
     const updated = await fetch(`${API_BASE_URL}/api/hradmin/requests/${request_id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     setRequest(await updated.json());
- 
+
     // Auto-hide success message sau 3s
     setTimeout(() => setSuccess(null), 3000);
   }
@@ -67,19 +67,19 @@ export default function HRRequestDetailScreen() {
       },
       body: JSON.stringify({ decision: "REJECTED", comment }),
     });
- 
+
     if (!response.ok) {
       const data = await response.json();
       setError(data.errorContent || "An unexpected error occurred.");
       return;
     }
- 
-    setSuccess("Request rejected successfully!"); // ← thêm
+
+    setSuccess("Request rejected. Attendance record has been updated with notes.");
     const updated = await fetch(`${API_BASE_URL}/api/hradmin/requests/${request_id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
     setRequest(await updated.json());
- 
+
     // Auto-hide success message sau 3s
     setTimeout(() => setSuccess(null), 3000);
   }

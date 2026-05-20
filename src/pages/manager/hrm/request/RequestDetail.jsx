@@ -40,7 +40,10 @@ export default function RequestDetailScreen() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message ?? "Failed");
-      setFeedback({ type: "success", msg: json.message ?? "Decision recorded." });
+      const msg = decision === "APPROVED"
+        ? "Request approved. Attendance record will be updated automatically."
+        : "Request rejected. Attendance record has been updated with notes.";
+      setFeedback({ type: "success", msg: json.message ?? msg });
       setTimeout(() => navigate(-1), 1500);
     } catch (e) {
       setFeedback({ type: "error", msg: e.message });

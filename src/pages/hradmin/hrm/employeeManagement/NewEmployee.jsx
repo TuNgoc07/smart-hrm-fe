@@ -387,11 +387,14 @@ export default function NewEmployee({ open = true, onClose, onSave, filterOption
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 md:gap-8">
                                     <Field label="Department">
                                         <SelectInput value={formData.departmentId} onChange={(e) => setField("departmentId", e.target.value)}>
-                                            <option value="">Select department</option>
+                                            <option value="">— None (assign later) —</option>
                                             {(localFilterOptions.departments || []).map((d) => (
                                                 <option key={d.id} value={d.id}>{d.name}</option>
                                             ))}
                                         </SelectInput>
+                                        <p className="text-[11px] text-slate-400 mt-1 leading-tight">
+                                            Optional — leave empty if this employee will manage a new department.
+                                        </p>
                                     </Field>
                                     <Field label="Position">
                                         <SelectInput value={formData.positionId} onChange={(e) => setField("positionId", e.target.value)}>

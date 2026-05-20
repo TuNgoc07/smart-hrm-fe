@@ -18,10 +18,13 @@ import HRRequestDetailScreen from "../pages/hradmin/hrm/workflow/RequestDetailSc
 import PayrollOverviewScreen from "../pages/hradmin/hrm/payhub/PayrollOverviewScreen";
 import PayrollCalculationScreen from "../pages/hradmin/hrm/payhub/PayrollCalculationScreen";
 import PayrollResultScreen from "../pages/hradmin/hrm/payhub/PayrollResultScreen";
+import PayslipHistoryScreen from "../pages/hradmin/hrm/payhub/PayslipHistoryScreen";
 import PayrollConfigurationScreen from "../pages/hradmin/hrm/payhub/PayrollConfigurationScreen";
+import HolidayCalendarScreen from "../pages/hradmin/hrm/payhub/HolidayCalendarScreen";
 import AIInsightsDashboard from "../pages/hradmin/hrm/intelligence/insights/AIInsightScreen";
 import AutomationRulesScreen from "../pages/hradmin/hrm/intelligence/automation/AutomationRuleScreen";
 import SupportHubScreen from "../common/SupportHubScreen";
+import ContractTemplateListScreen from "../pages/hradmin/hrm/contract/ContractTemplateListScreen";
 
 export default function HRAdminRoutes(){
     return (
@@ -35,6 +38,7 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/department-list" element={<DepartmentListScreen />} />
                 <Route path="/hr/position-list" element={<PositionListScreen />} />
                 <Route path="/hr/contract-list" element={<ContractListScreen />} />
+                <Route path="/hr/contract-templates" element={<ContractTemplateListScreen />} />
                 <Route path="/hr/org-chart" element={<OrgChartScreen/>} />
                 <Route path="/hr/attendance/records" element={<AttendanceRecordScreen />} />
                 <Route path="/hr/attendance/exceptions" element={<AttendanceExceptionsScreen />} />
@@ -46,7 +50,9 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/payroll-overview" element={<PayrollOverviewScreen />} />
                 <Route path="/hr/payroll-calculation" element={<PayrollCalculationScreen />} />
                 <Route path="/hr/payroll-results" element={<PayrollResultScreen />} />
+                <Route path="/hr/payslip-history" element={<PayslipHistoryScreen />} />
                 <Route path="/hr/payroll-config" element={<PayrollConfigurationScreen />} />
+                <Route path="/hr/holiday-calendar" element={<HolidayCalendarScreen />} />
                 <Route path="/hr/ai-insights" element={<AIInsightsDashboard />} />
                 <Route path="/hr/ai-assistant" element={<SupportHubScreen />} />
                 <Route path="/hr/automation-rules" element={<AutomationRulesScreen />} />

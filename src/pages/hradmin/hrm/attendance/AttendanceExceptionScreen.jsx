@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import ReviewExceptionModal from "./ExceptionReviewModal";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -6,6 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 /* ================= MAIN SCREEN ================= */
 
 export default function AttendanceExceptionsScreen() {
+  const navigate = useNavigate();
   const [reviewing, setReviewing]   = useState(null);
   const [exceptions, setExceptions] = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -54,6 +56,7 @@ export default function AttendanceExceptionsScreen() {
             data={filtered}
             onReview={setReviewing}
             onRefresh={fetchExceptions}
+            navigate={navigate}
           />
       }
 
@@ -160,7 +163,7 @@ function FilterBar({ active, onChange, counts }) {
 
 /* ================= TABLE ================= */
 
-function ExceptionsTable({ data, onReview }) {
+function ExceptionsTable({ data, onReview, navigate }) {
   if (data.length === 0) {
     return (
       <div className="bg-white rounded-xl border shadow-sm p-16 text-center text-slate-400">
@@ -180,19 +183,20 @@ function ExceptionsTable({ data, onReview }) {
             <Th>Exception Type</Th>
             <Th>Detected By</Th>
             <Th>Reason</Th>
+            <Th>Reference</Th>
             <Th>Status</Th>
             <Th right>Actions</Th>
           </tr>
         </thead>
         <tbody className="divide-y">
-          {data.map(ex => <ExceptionRow key={ex.exceptionId} data={ex} onReview={onReview} />)}
+          {data.map(ex => <ExceptionRow key={ex.exceptionId} data={ex} onReview={onReview} navigate={navigate} />)}
         </tbody>
       </table>
     </div>
   );
 }
 
-function ExceptionRow({ data, onReview }) {
+function ExceptionRow({ data, onReview, navigate }) {
   const isExplanationReady = data.status === "explanation_submitted";
   const highlight = data.status === "pending" || isExplanationReady;
   const borderColor = isExplanationReady ? "border-l-blue-400" : "border-l-amber-400";
@@ -225,6 +229,20 @@ function ExceptionRow({ data, onReview }) {
       </Td>
       <Td><span className="text-slate-500 italic">{data.detectedBy}</span></Td>
       <Td><span className="text-slate-500 text-xs max-w-[180px] block truncate" title={data.reason}>{data.reason}</span></Td>
+      <Td>
+        {data.referenceId ? (
+          <button
+            onClick={() => navigate(`/hr/request-details/${data.referenceId}`)}
+            className="text-primary text-xs font-bold hover:underline flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-sm">link</span>
+            #{data.referenceId}
+            <span className="text-slate-400 font-normal">({data.referenceType})</span>
+          </button>
+        ) : (
+          <span className="text-slate-400 text-xs">—</span>
+        )}
+      </Td>
       <Td><StatusBadge status={data.status} /></Td>
       <Td right>
         <RowAction data={data} onReview={onReview} />

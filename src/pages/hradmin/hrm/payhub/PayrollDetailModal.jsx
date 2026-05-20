@@ -1,4 +1,4 @@
-export default function PayrollDetailModal({ data, onClose }) {
+export default function PayrollDetailModal({ data, onClose, isLocked = false }) {
   const totalOT =
   Array.isArray(data.otDetails)
     ? data.otDetails.reduce((s, i) => s + i.amount, 0)
@@ -21,6 +21,12 @@ export default function PayrollDetailModal({ data, onClose }) {
             <span className="px-3 py-1 rounded-full bg-blue-50 text-primary text-xs font-bold">
               {data.status}
             </span>
+            {isLocked && (
+              <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 text-xs font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[12px]">lock</span>
+                LOCKED
+              </span>
+            )}
           </div>
 
           <button
@@ -146,13 +152,25 @@ export default function PayrollDetailModal({ data, onClose }) {
               </Section>
 
               {/* Final Adjustment */}
-              <Section title="Final Adjustment" icon="✏️">
-                <Card>
-                  <Input label="Manual Bonus" />
-                  <Input label="Adjustment Penalty" />
-                  <Textarea label="Reason / Comment" required />
-                </Card>
-              </Section>
+              {!isLocked ? (
+                <Section title="Final Adjustment" icon="✏️">
+                  <Card>
+                    <Input label="Manual Bonus" />
+                    <Input label="Adjustment Penalty" />
+                    <Textarea label="Reason / Comment" required />
+                  </Card>
+                </Section>
+              ) : (
+                <Section title="Final Adjustment" icon="🔒">
+                  <Card>
+                    <div className="text-center py-8 text-slate-500">
+                      <span className="material-symbols-outlined text-4xl mb-2">lock</span>
+                      <p className="font-bold">Payroll period is locked</p>
+                      <p className="text-sm">No adjustments can be made after locking.</p>
+                    </div>
+                  </Card>
+                </Section>
+              )}
 
             </div>
           </div>
@@ -163,9 +181,18 @@ export default function PayrollDetailModal({ data, onClose }) {
           <button onClick={onClose} className="px-6 py-2 border rounded-xl font-bold">
             Cancel
           </button>
-          <button className="px-8 py-2 bg-primary text-white rounded-xl font-bold">
-            Save Adjustments
-          </button>
+          {!isLocked ? (
+            <button className="px-8 py-2 bg-primary text-white rounded-xl font-bold">
+              Save Adjustments
+            </button>
+          ) : (
+            <button 
+              disabled
+              className="px-8 py-2 bg-slate-400 text-white rounded-xl font-bold cursor-not-allowed"
+            >
+              Locked - Cannot Save
+            </button>
+          )}
         </div>
       </div>
     </div>

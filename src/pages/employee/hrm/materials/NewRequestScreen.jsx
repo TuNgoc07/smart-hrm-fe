@@ -80,11 +80,11 @@ function RequestTypeSelector({ selectedType, onSelect }) {
   );
 }
 
-function MainFormCard({ selectedType, formData, onChange }) {
+function MainFormCard({ selectedType, formData, onChange, employeeId }) {
   const renderForm = () => {
     switch (selectedType) {
       case "LEAVE":
-        return <LeaveRequestForm formData={formData} onChange={onChange} />;
+        return <LeaveRequestForm formData={formData} onChange={onChange} employeeId={employeeId} />;
       case "OT":
         return <OTRequestForm formData={formData} onChange={onChange} />;
       case "ADJUSTMENT":
@@ -182,7 +182,7 @@ function InfoSidebar({ selectedType }) {
   );
 }
 
-function DynamicFormArea({ selectedType, formData, onChange }) {
+function DynamicFormArea({ selectedType, formData, onChange, employeeId }) {
   const getFormTitle = () => {
     switch (selectedType) {
       case "LEAVE":
@@ -209,7 +209,7 @@ function DynamicFormArea({ selectedType, formData, onChange }) {
     <section className="space-y-4">
       <FormHeader stepNumber="02" title={getFormTitle()} />
       <div className="flex flex-col lg:flex-row gap-6">
-        <MainFormCard selectedType={selectedType} formData={formData} onChange={onChange} />
+        <MainFormCard selectedType={selectedType} formData={formData} onChange={onChange} employeeId={employeeId} />
         <InfoSidebar selectedType={selectedType} />
       </div>
     </section>
@@ -243,6 +243,7 @@ export default function NewRequestScreen() {
   const [formData, setFormData] = useState({
     // Leave Request fields
     leaveType: "",
+    policyId: null,  // ← THÊM MỚI
     startDate: "",
     endDate: "",
     // OT Request fields
@@ -266,6 +267,7 @@ export default function NewRequestScreen() {
     // Reset form when switching types
     setFormData({
       leaveType: "",
+      policyId: null,
       startDate: "",
       endDate: "",
       otDate: "",
@@ -286,6 +288,7 @@ export default function NewRequestScreen() {
     setSelectedType(null);
     setFormData({
       leaveType: "",
+      policyId: null,
       startDate: "",
       endDate: "",
       otDate: "",
@@ -331,6 +334,7 @@ export default function NewRequestScreen() {
           title: `Leave Request - ${formData.leaveType}`,
           description: formData.reason,
           leaveType: formData.leaveType,
+          policyId: formData.policyId,  // ← THÊM MỚI
           startDate: formData.startDate,
           endDate: formData.endDate,
           durationDays: formData.duration || 1,
@@ -376,7 +380,7 @@ export default function NewRequestScreen() {
       <div className="space-y-8">
         <Breadcrumbs />
         <RequestTypeSelector selectedType={selectedType} onSelect={handleTypeSelect} />
-        <DynamicFormArea selectedType={selectedType} formData={formData} onChange={setFormData} />
+        <DynamicFormArea selectedType={selectedType} formData={formData} onChange={setFormData} employeeId={getEmployeeIdFromToken()} />
         {selectedType && (
           <ActionButton selectedType={selectedType} onCancel={handleCancel} onSubmit={handleSubmit} submitting={submitting} />
         )}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NewEmployee from "./NewEmployee";
+import LeavePolicyConfigModal from "./LeavePolicyConfigModal";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 // ─── HEADER ──────────────────────────────────────────────────────────────────
-function Header({ activeCount, onAddEmployee }) {
+function Header({ activeCount, onAddEmployee, onManageLeavePolicies }) {
   return (
     <div className="flex justify-between items-end">
       <div>
@@ -19,6 +20,13 @@ function Header({ activeCount, onAddEmployee }) {
       <div className="flex gap-3">
         <button className="px-4 h-10 border rounded-lg font-bold text-sm">Import</button>
         <button className="px-4 h-10 border rounded-lg font-bold text-sm">Export</button>
+        <button
+          onClick={onManageLeavePolicies}
+          className="px-4 h-10 border rounded-lg font-bold text-sm flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px]">policy</span>
+          Manage Leave Policies
+        </button>
         <button
           onClick={onAddEmployee}
           className="px-6 h-11 bg-primary text-white rounded-lg font-bold"
@@ -341,6 +349,8 @@ export default function EmployeeListScreen() {
   const [filterOptions, setFilterOptions] = useState({ departments: [], positions: [], employmentTypes: [], roles: [] });
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [showNewEmployee, setShowNewEmployee] = useState(false);
+  const [showLeavePolicyModal, setShowLeavePolicyModal] = useState(false);
+  const [selectedPolicy, setSelectedPolicy] = useState(null);
   const navigate = useNavigate();
 
   // Debounce search
@@ -455,7 +465,11 @@ export default function EmployeeListScreen() {
 
   return (
     <div className="space-y-6" onClick={() => setOpenMenuIndex(null)}>
-      <Header activeCount={activeCount} onAddEmployee={() => setShowNewEmployee(true)} />
+      <Header
+        activeCount={activeCount}
+        onAddEmployee={() => setShowNewEmployee(true)}
+        onManageLeavePolicies={() => setShowLeavePolicyModal(true)}
+      />
 
       <FilterBar
         searchInput={searchInput}
@@ -487,6 +501,21 @@ export default function EmployeeListScreen() {
           onClose={() => setShowNewEmployee(false)}
           onSave={handleEmployeeCreated}
           filterOptions={filterOptions}
+        />
+      )}
+
+      {showLeavePolicyModal && (
+        <LeavePolicyConfigModal
+          isOpen={showLeavePolicyModal}
+          onClose={() => {
+            setShowLeavePolicyModal(false);
+            setSelectedPolicy(null);
+          }}
+          policyData={selectedPolicy}
+          onSuccess={() => {
+            setShowLeavePolicyModal(false);
+            setSelectedPolicy(null);
+          }}
         />
       )}
     </div>

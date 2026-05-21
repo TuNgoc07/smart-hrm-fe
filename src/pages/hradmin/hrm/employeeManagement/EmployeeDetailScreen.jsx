@@ -5,6 +5,7 @@ import CompensationTab from "./tabs/CompensationTab";
 import ContractTab from "./tabs/ContractTab";
 import LifecycleTab from "./tabs/LifecycleTab";
 import FilesTab from "./tabs/FilesTab";
+import LeaveTab from "./tabs/LeaveTab";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
@@ -38,6 +39,7 @@ export default function EmployeeDetailScreen() {
     { key: "lifecycle", label: "Lifecycle" },
     { key: "files", label: "Files" },
     { key: "compensation", label: "Compensation" },
+    { key: "leave", label: "Leave" },
   ];
 
 
@@ -212,6 +214,9 @@ export default function EmployeeDetailScreen() {
       )}
       {activeTab == "files" && (
         <FilesTab />
+      )}
+      {activeTab === "leave" && (
+        <LeaveTab />
       )}
 
 

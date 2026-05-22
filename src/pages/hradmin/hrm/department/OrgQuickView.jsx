@@ -36,9 +36,26 @@ export default function OrgQuickView({ employee, onClose }) {
   
             {/* DETAILS */}
             <div className="space-y-6">
-              <InfoRow icon="domain" label="Department" value={employee.department} />
-              <InfoRow icon="location_on" label="Location" value={employee.location} />
-  
+              <InfoRow icon="domain" label="Department" value={employee.department || "Not assigned"} />
+              <InfoRow icon="location_on" label="Location" value={employee.location || "Not specified"} />
+
+              {employee.email && (
+                <InfoRow icon="email" label="Email" value={employee.email} />
+              )}
+
+              {employee.phone && (
+                <InfoRow icon="phone" label="Phone" value={employee.phone} />
+              )}
+
+              {employee.status && (
+                <InfoRow
+                  icon="badge"
+                  label="Status"
+                  value={employee.status}
+                  highlight={employee.status === "active"}
+                />
+              )}
+
               {employee.reportsTo && (
                 <InfoRow
                   icon="supervisor_account"

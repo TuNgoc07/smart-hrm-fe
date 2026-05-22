@@ -6,7 +6,8 @@ import AttendanceScreen from "../pages/hradmin/hrm/attendance/AttendanceScreen";
 import EmployeeListScreen from "../pages/hradmin/hrm/employeeManagement/EmployeeListScreen";
 import EmployeeDetailScreen from "../pages/hradmin/hrm/employeeManagement/EmployeeDetailScreen";
 import DepartmentListScreen from "../pages/hradmin/hrm/department/DepartmentListScreen";
-import PositionListScreen from "../pages/hradmin/hrm/position/positionListScreen";
+import PositionListScreen from "../pages/hradmin/hrm/position/PositionListScreen";
+import JobListScreen from "../pages/hradmin/hrm/position/JobListScreen";
 import ContractListScreen from "../pages/hradmin/hrm/contract/ContractListScreen";
 import OrgChartScreen from "../pages/hradmin/hrm/department/OrgChartScreen";
 import AttendanceRecordScreen from "../pages/hradmin/hrm/attendance/AttendanceRecordScreen";
@@ -37,6 +38,7 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/employee-detail/:emp_id" element={< EmployeeDetailScreen />} />
                 <Route path="/hr/department-list" element={<DepartmentListScreen />} />
                 <Route path="/hr/position-list" element={<PositionListScreen />} />
+                <Route path="/hr/jobs" element={<JobListScreen />} />
                 <Route path="/hr/contract-list" element={<ContractListScreen />} />
                 <Route path="/hr/contract-templates" element={<ContractTemplateListScreen />} />
                 <Route path="/hr/org-chart" element={<OrgChartScreen/>} />

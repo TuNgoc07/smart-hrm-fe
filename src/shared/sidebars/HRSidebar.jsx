@@ -60,6 +60,10 @@ export default function HRSidebar() {
               <span className="material-symbols-outlined text-lg mr-2">description</span>
               Contracts
             </NavLink>
+            <NavLink to="/hr/jobs" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">work</span>
+              Jobs
+            </NavLink>
           </div>
         </div>
 

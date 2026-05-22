@@ -18,6 +18,7 @@ export default function NewContractModal({ isOpen, onClose, employeeId, onSucces
   const [error, setError] = useState("");
   const [salaryTiers, setSalaryTiers] = useState([]);
   const [tiersLoading, setTiersLoading] = useState(false);
+  const [salaryTierFromPosition, setSalaryTierFromPosition] = useState(null); // Salary tier từ position của employee
 
   // Fetch salary tiers on component mount
   useEffect(() => {
@@ -44,6 +45,26 @@ export default function NewContractModal({ isOpen, onClose, employeeId, onSucces
 
     fetchSalaryTiers();
   }, []);
+
+  // Fetch salary tier từ position của employee (auto-fill)
+  useEffect(() => {
+    if (!employeeId) return;
+    const fetchSalaryTierFromPosition = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/hradmin/employees/${employeeId}/salary-tier-from-position`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        const data = await res.json();
+        if (data.status === 'success' && data.data) {
+          setSalaryTierFromPosition(data.data);
+          setFormData((prev) => ({ ...prev, salaryTierId: data.data }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch salary tier from position:', err);
+      }
+    };
+    fetchSalaryTierFromPosition();
+  }, [employeeId]);
 
   if (!isOpen) return null;
 
@@ -186,31 +207,35 @@ export default function NewContractModal({ isOpen, onClose, employeeId, onSucces
             </div>
           </div>
 
-          {/* Salary Tier */}
+          {/* Salary Tier - Auto-filled from position, disabled to prevent manual selection */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
               Salary Tier *
+              <span className="ml-1 text-slate-400 font-normal normal-case">– tự động từ Position</span>
             </label>
             <select
               name="salaryTierId"
               value={formData.salaryTierId}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               required
-              disabled={tiersLoading}
+              disabled={true} // Luôn disable để HR không chọn thủ công
             >
               {tiersLoading ? (
                 <option value="">Loading salary tiers...</option>
-              ) : salaryTiers.length > 0 ? (
+              ) : salaryTierFromPosition ? (
                 salaryTiers.map((tier) => (
                   <option key={tier.tierId} value={tier.tierId}>
                     {tier.tierName} ({tier.tierCode}) - Min: {tier.minSalary?.toLocaleString("vi-VN")} VND, Max: {tier.maxSalary?.toLocaleString("vi-VN")} VND
                   </option>
                 ))
               ) : (
-                <option value="">No salary tiers available</option>
+                <option value="">Employee chưa có Position hoặc Position chưa config Salary Tier</option>
               )}
             </select>
+            <p className="text-xs text-slate-400 mt-1">
+              Salary tier được tự động điền từ Position của nhân viên. HR không thể thay đổi thủ công.
+            </p>
           </div>
 
           {/* Employment Status */}

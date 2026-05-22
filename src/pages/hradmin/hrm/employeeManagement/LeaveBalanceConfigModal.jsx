@@ -13,7 +13,8 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
     adjustedDays: "0",
     usedDays: "0",       // read-only
     pendingDays: "0",    // read-only
-    remainingDays: "0"   // computed
+    remainingDays: "0",   // computed
+    autoCalculate: true  // flag to show auto-calculation UI
   });
 
   const [loading, setLoading] = useState(false);
@@ -58,7 +59,8 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
         adjustedDays: balanceData.adjustedDays || "0",
         usedDays: balanceData.usedDays || "0",
         pendingDays: balanceData.pendingDays || "0",
-        remainingDays: balanceData.remainingDays || "0"
+        remainingDays: balanceData.remainingDays || "0",
+        autoCalculate: false  // editing existing balance, manual mode
       });
     } else {
       setFormData({
@@ -71,7 +73,8 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
         adjustedDays: "0",
         usedDays: "0",
         pendingDays: "0",
-        remainingDays: "0"
+        remainingDays: "0",
+        autoCalculate: true  // creating new balance, auto-calculate by default
       });
     }
   }, [balanceData, employeeId]);
@@ -79,11 +82,34 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: type === "checkbox" ? checked : value
     }));
+  };
+
+  // Calculate prorated days for preview
+  const calculateProratedDays = () => {
+    if (!selectedPolicy || !formData.year || !formData.employeeId) return null;
+
+    const daysPerYear = selectedPolicy.daysPerYear;
+    const year = parseInt(formData.year);
+
+    // This is a client-side estimation - actual calculation happens on backend
+    // We'll show a preview based on hire date if available
+    const hireDate = new Date(); // Placeholder - would need employee data
+    const hireMonth = hireDate.getMonth() + 1; // 1-12
+
+    const monthsRemaining = 12 - hireMonth + 1;
+    const monthlyEntitlement = daysPerYear / 12;
+    const proratedDays = (monthlyEntitlement * monthsRemaining).toFixed(2);
+
+    return {
+      full: daysPerYear,
+      prorated: parseFloat(proratedDays),
+      monthsRemaining
+    };
   };
 
   const handleSubmit = async (e) => {
@@ -100,7 +126,8 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
             employeeId: formData.employeeId,
             policyId: parseInt(formData.policyId),
             year: parseInt(formData.year),
-            entitledDays: parseFloat(formData.entitledDays) || 0,
+            // Only send entitledDays if autoCalculate is false (manual override)
+            ...(formData.autoCalculate ? {} : { entitledDays: parseFloat(formData.entitledDays) || 0 }),
             carriedOverDays: parseFloat(formData.carriedOverDays) || 0,
             adjustedDays: parseFloat(formData.adjustedDays) || 0
           }
@@ -225,23 +252,57 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
             />
           </div>
 
+          {/* Auto-calculate toggle (only for create mode) */}
+          {!formData.balanceId && (
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <input
+                type="checkbox"
+                name="autoCalculate"
+                id="autoCalculate"
+                checked={formData.autoCalculate}
+                onChange={handleChange}
+                className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary"
+              />
+              <label htmlFor="autoCalculate" className="text-sm font-medium text-slate-700 cursor-pointer">
+                Auto-calculate based on hire date
+              </label>
+            </div>
+          )}
+
           {/* Entitled Days */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
-              Entitled Days *
+              Entitled Days {!formData.autoCalculate && "*"}
             </label>
-            <input
-              type="number"
-              name="entitledDays"
-              value={formData.entitledDays}
-              onChange={handleChange}
-              placeholder="e.g., 12"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              required
-              min="0"
-              step="0.5"
-            />
-            {selectedPolicy && !formData.entitledDays && (
+            {formData.autoCalculate && !formData.balanceId ? (
+              <div className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-green-50 text-green-700">
+                {selectedPolicy ? (
+                  <span className="text-sm">
+                    Auto-calculated based on hire date and policy ({selectedPolicy.daysPerYear} days/year)
+                  </span>
+                ) : (
+                  <span className="text-sm text-slate-500">Select a policy to see calculation</span>
+                )}
+              </div>
+            ) : (
+              <input
+                type="number"
+                name="entitledDays"
+                value={formData.entitledDays}
+                onChange={handleChange}
+                placeholder="e.g., 12"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required={!formData.autoCalculate}
+                min="0"
+                step="0.5"
+              />
+            )}
+            {selectedPolicy && formData.autoCalculate && !formData.balanceId && (
+              <div className="mt-1 text-xs text-blue-600">
+                System will automatically calculate prorated days based on employee's hire date
+              </div>
+            )}
+            {selectedPolicy && !formData.autoCalculate && !formData.entitledDays && (
               <div className="mt-1 text-xs text-blue-600">
                 Default from policy: {selectedPolicy.daysPerYear} days
               </div>

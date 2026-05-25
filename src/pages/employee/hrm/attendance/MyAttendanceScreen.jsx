@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fetchMyAttendance, fetchMyAttendanceCycles, getAttendanceStatusConfig } from "../../../../utils/employeeApi";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const getHeaders = () => ({
@@ -7,62 +8,141 @@ const getHeaders = () => ({
 });
 
 export default function MyAttendanceScreen() {
+    /* ── Cycles: danh sách kỳ từ backend (dựa trên AttendancePeriodConfig) ── */
+    const [cycles, setCycles] = useState([]);        /* 12 kỳ gần nhất */
+    const [selectedCycle, setSelectedCycle] = useState(null); /* kỳ đang chọn */
+    const [cyclesLoading, setCyclesLoading] = useState(true);
+
+    /* ── Attendance data cho kỳ đang chọn ──────────────────────── */
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState("All");
+
+    /* Bước 1: Lấy danh sách kỳ — chạy 1 lần khi mount */
+    useEffect(() => {
+        fetchMyAttendanceCycles()
+            .then(list => {
+                setCycles(list);
+                /* Tự chọn kỳ hiện tại (isCurrent = true) */
+                const current = list.find(c => c.isCurrent) || list[0];
+                setSelectedCycle(current || null);
+            })
+            .catch(console.error)
+            .finally(() => setCyclesLoading(false));
+    }, []);
+
+    /* Bước 2: Lấy data attendance khi selectedCycle thay đổi */
+    useEffect(() => {
+        if (!selectedCycle) return;
+        setLoading(true);
+        fetchMyAttendance(selectedCycle.startDate, selectedCycle.endDate)
+            .then(res => setData(res))
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, [selectedCycle]);
+
+    const stats = data?.stats || {};
+    const todayRecord = data?.today;
+    const records = (data?.records || []).filter(r => {
+        if (statusFilter === "All") return true;
+        return r.status?.toLowerCase() === statusFilter.toLowerCase();
+    });
+
+    /* ── Fallback UI: nếu không có cycles (lỗi API hoặc chưa có data) ── */
+    if (!cyclesLoading && cycles.length === 0) {
+        return (
+            <main className="overflow-y-auto scrollbar-hide">
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-6xl">
+                        calendar_month
+                    </span>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Không thể tải kỳ chấm công</h3>
+                    <p className="text-sm text-slate-500 max-w-md text-center">
+                        Hệ thống không tìm thấy dữ liệu kỳ chấm công. Vui lòng liên hệ HR Admin để cấu hình kỳ chấm công hoặc thử lại sau.
+                    </p>
+                </div>
+            </main>
+        );
+    }
+
     return (
         <main className="overflow-y-auto scrollbar-hide">
             <div className="space-y-8">
-                {/* <!-- Pending Explanation Requests --> */}
                 <PendingExplanationsSection />
-
-                {/* <!-- Today Attendance Card --> */}
-                <TodayAttendanceCard />
-
-                {/* <!-- Summary Stats Grid --> */}
-                <SummaryStatsGrid />
-
-                {/* <!-- Attendance History --> */}
-                <AttendanceHistorySection />
+                <TodayAttendanceCard record={todayRecord} loading={loading} />
+                <SummaryStatsGrid stats={stats} loading={loading} />
+                <AttendanceHistorySection
+                    records={records}
+                    loading={loading}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    cycles={cycles}
+                    cyclesLoading={cyclesLoading}
+                    selectedCycle={selectedCycle}
+                    setSelectedCycle={setSelectedCycle}
+                    totalCount={data?.records?.length || 0}
+                />
             </div>
             <Footer />
         </main>
     );
 }
 
-function TodayAttendanceCard() {
+function TodayAttendanceCard({ record, loading }) {
+    const todayLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+    const status = record?.status || "no_record";
+    const statusCfg = getAttendanceStatusConfig(status);
+    const checkin = record?.checkInTime || "--:--";
+    const checkout = record?.checkOutTime || "--:--";
+    const shiftEnd = record?.shiftEnd || "18:00";
+    const isRemote = record?.isRemote;
+
     return (
         <section className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-6 items-center">
             <div className="flex-1 space-y-4">
                 <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-bold rounded-full uppercase tracking-wider">
-                        <span className="size-2 bg-green-600 dark:bg-green-400 rounded-full"></span>
-                        Working
-                    </span>
+                    {loading
+                        ? <div className="h-6 w-24 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
+                        : <span className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wider ${statusCfg.badge}`}>
+                            <span className={`size-2 rounded-full ${statusCfg.dot}`}></span>
+                            {statusCfg.label}
+                          </span>
+                    }
                     <span className="text-slate-400 text-sm">•</span>
-                    <p className="text-slate-900 dark:text-white font-bold text-lg">Today – Tuesday, Oct 24</p>
+                    <p className="text-slate-900 dark:text-white font-bold text-lg">Today – {todayLabel}</p>
+                    {isRemote && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 rounded-full font-bold">Remote</span>}
                 </div>
                 <div className="grid grid-cols-2 gap-8 py-2">
                     <div className="space-y-1">
                         <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-tight">Check-in Time</p>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-white">09:02 AM</p>
+                        {loading
+                            ? <div className="h-8 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                            : <p className={`text-2xl font-extrabold ${checkin !== '--:--' ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-700'}`}>{checkin}</p>
+                        }
                     </div>
                     <div className="space-y-1">
                         <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-tight">Check-out Time</p>
-                        <p className="text-2xl font-extrabold text-slate-300 dark:text-slate-700">--:--</p>
+                        {loading
+                            ? <div className="h-8 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                            : <p className={`text-2xl font-extrabold ${checkout !== '--:--' ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-700'}`}>{checkout}</p>
+                        }
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-[20px]">logout</span>
-                        Check-out
-                    </button>
-                    <p className="text-sm text-slate-500 italic">Expected checkout: 06:00 PM</p>
+                    {!record?.checkout && record?.checkin && (
+                        <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-[20px]">logout</span>
+                            Check-out
+                        </button>
+                    )}
+                    {shiftEnd && <p className="text-sm text-slate-500 italic">Expected checkout: {shiftEnd}</p>}
                 </div>
             </div>
-            <div className="w-full md:w-64 h-40 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden relative group">
+            <div className="w-full md:w-64 h-40 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                <div className="h-full w-full bg-cover bg-center" dataalt="Modern abstract office building exterior" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCsCpdIVc-oWFG0W-f-rR0PwzG1Dk-olCPTWp4i20-u3Kle5beC4PfQFFlwTnOaAqlrQF4-ZsideMxmASrN6qswtCKF59ZEJWVzFq5NakVAAZATWMZnLC6k7V8fH_wCjQH7N4Fpdh4D7Kb4MexABsqPnbEtZ5woKjcF4E6Ioe1SvIeCYi9FTl4n6nYY0kJK2r2KHhyhJJptg_QR21o-MMnuW0s2xOBWU32qeVd9dfTTP7lC1hb8MWlge4jK61ZFNEdD-9Ej62BDG8w")' }}></div>
                 <div className="absolute bottom-3 left-3 flex gap-2">
                     <span className="bg-white/90 dark:bg-slate-900/90 text-[10px] px-2 py-1 rounded font-bold shadow-sm">HQ Office</span>
-                    <span className="bg-white/90 dark:bg-slate-900/90 text-[10px] px-2 py-1 rounded font-bold shadow-sm">Verified</span>
+                    {record?.checkin && <span className="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-[10px] px-2 py-1 rounded font-bold shadow-sm">Verified</span>}
                 </div>
             </div>
         </section>
@@ -91,17 +171,18 @@ function StatsCard(props) {
                 <span className={`text-[10px] font-bold ${textColor[props.index]} px-2 py-0.5 rounded uppercase`}>This Month</span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{props.label}</p>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{props.days}</p>
+            <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{props.days}</div>
         </div>
     )
 }
-function SummaryStatsGrid() {
+function SummaryStatsGrid({ stats, loading }) {
+    const Skeleton = () => <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1" />;
     return (
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard index={0} icon="calendar_month" label="Working Days" days="18" />
-            <StatsCard index={1} icon="schedule" label="Late Days" days="2" />
-            <StatsCard index={2} icon="error" label="Missing Records" days="1" />
-            <StatsCard index={3} icon="hourglass_top" label="OT Hours" days="4.5" />
+            <StatsCard index={0} icon="calendar_month" label="Working Days" days={loading ? <Skeleton /> : stats.workingDays ?? "–"} />
+            <StatsCard index={1} icon="schedule" label="Late Days" days={loading ? <Skeleton /> : stats.lateDays ?? "–"} />
+            <StatsCard index={2} icon="error" label="Missing Records" days={loading ? <Skeleton /> : stats.missingRecords ?? "–"} />
+            <StatsCard index={3} icon="hourglass_top" label="OT Hours" days={loading ? <Skeleton /> : stats.otHours ?? "–"} />
         </section>
     );
 }
@@ -142,22 +223,57 @@ function Tr(props) {
     );
 }
 
-function AttendanceHistorySection() {
+function AttendanceHistorySection({ records, loading, statusFilter, setStatusFilter, cycles, cyclesLoading, selectedCycle, setSelectedCycle, totalCount }) {
+    const filters = ["All", "Present", "Working", "Late", "Missing"];
+    const dateLabel = (dateStr) => {
+        try { return new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); }
+        catch { return dateStr; }
+    };
+
     return (
         <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h3 className="font-bold text-slate-900 dark:text-white">Attendance History</h3>
+                <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Attendance History</h3>
+                    {/* Hiển thị kỳ đang xem — startDate → endDate */}
+                    {selectedCycle && (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            Period: {dateLabel(selectedCycle.startDate)} – {dateLabel(selectedCycle.endDate)}
+                        </p>
+                    )}
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    <select className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-sm font-bold rounded-lg px-3 py-2 pr-8 focus:ring-primary">
-                        <option>October 2023</option>
-                        <option>September 2023</option>
-                        <option>August 2023</option>
-                    </select>
+                    {/* Dropdown chọn kỳ chấm công (thay thế month/year selector) */}
+                    {cyclesLoading ? (
+                        <div className="h-10 w-48 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+                    ) : (
+                        <select
+                            value={selectedCycle ? `${selectedCycle.startDate}|${selectedCycle.endDate}` : ""}
+                            onChange={e => {
+                                /* Parse lại startDate|endDate từ value */
+                                const [start, end] = e.target.value.split("|");
+                                const found = cycles.find(c => c.startDate === start && c.endDate === end);
+                                if (found) setSelectedCycle(found);
+                            }}
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold rounded-lg px-3 py-2 focus:ring-primary"
+                        >
+                            {cycles.map(c => (
+                                <option key={`${c.startDate}|${c.endDate}`} value={`${c.startDate}|${c.endDate}`}>
+                                    {c.label}{c.isCurrent ? " (Current)" : ""}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                     <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                        <button className="px-3 py-1.5 text-xs font-bold rounded bg-primary text-white shadow-sm">All</button>
-                        <button className="px-3 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-700">Present</button>
-                        <button className="px-3 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-700">Late</button>
-                        <button className="px-3 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-700">Missing</button>
+                        {filters.map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setStatusFilter(f)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
+                                    statusFilter === f ? "bg-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+                                }`}
+                            >{f}</button>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -174,25 +290,31 @@ function AttendanceHistorySection() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {/* <!-- Oct 24 (Today) --> */}
-                        <Tr datetime="Oct 24, 2023" day="Tuesday" checkin="09:02 AM" checkout="--:--" workingHours="9h 10m" status="Working" icon="check_circle" isRequest={true} />
-                        {/* <!-- Oct 23 --> */}
-                        <Tr datetime="Oct 23, 2023" day="Monday" checkin="08:55 AM" checkout="06:05 PM" workingHours="9h 10m" status="Present" icon="check_circle" />
-                        {/* <!-- Oct 21 (Missing Record) --> */}
-                        <Tr datetime="Oct 21, 2023" day="Saturday" checkin="No entry" checkout="No entry" workingHours="No entry" status="Missing" icon="error" />
-                        {/* <!-- Oct 20 --> */}
-                        <Tr datetime="Oct 20, 2023" day="Friday" checkin="09:15 AM" checkout="06:05 PM" workingHours="9h 10m" status="Late" icon="check_circle" />
+                        {loading
+                            ? Array.from({ length: 5 }).map((_, i) => (
+                                <tr key={i}><td colSpan={6} className="px-6 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td></tr>
+                            ))
+                            : records.length === 0
+                                ? <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-400">No records found</td></tr>
+                                : records.map((r,index) => (
+                                    <Tr
+                                        key={index}
+                                        datetime={dateLabel(r.attendanceDate)}
+                                        day={r.dayOfWeek}
+                                        checkin={r.checkInTime || "–"}
+                                        checkout={r.checkOutTime || "–"}
+                                        workingHours={r.workHours || "–"}
+                                        status={r.status}
+                                        isRequest={r.isException || r.status === "Missing"}
+                                        icon={r.status === "Missing" ? "error" : "check_circle"}
+                                    />
+                                ))
+                        }
                     </tbody>
                 </table>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <p className="text-xs text-slate-500">Showing 1-15 of 22 entries</p>
-                <div className="flex gap-2">
-                    <button className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-50">Prev</button>
-                    <button className="px-3 py-1 rounded bg-white dark:bg-slate-900 border border-primary text-primary text-xs font-bold">1</button>
-                    <button className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs font-bold">2</button>
-                    <button className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs font-bold">Next</button>
-                </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800">
+                <p className="text-xs text-slate-500">Showing {records.length} of {totalCount} entries this period</p>
             </div>
         </section>
     );

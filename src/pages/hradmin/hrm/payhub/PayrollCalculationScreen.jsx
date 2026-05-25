@@ -471,8 +471,8 @@ function CreateCycleModal({ onClose, onCreated }) {
   const m     = String(now.getMonth() + 1).padStart(2, "0");
   const [form, setForm]     = useState({
     cycleName: `Payroll ${m}/${y}`,
-    startDate: `${y}-${m}-01`,
-    endDate:   `${y}-${m}-${new Date(y, now.getMonth() + 1, 0).getDate()}`,
+    startDate: "",  /* Đổi thành rỗng để khuyến khích dùng auto-fill */
+    endDate:   "",
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState("");
@@ -514,14 +514,20 @@ function CreateCycleModal({ onClose, onCreated }) {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Từ ngày *</label>
-            <input required type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Từ ngày</label>
+            <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            <p className="text-xs text-slate-400 mt-1">
+              Nếu để trống → tự động dùng kỳ từ <span className="font-semibold">Attendance Period Config</span>
+            </p>
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Đến ngày *</label>
-            <input required type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Đến ngày</label>
+            <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            <p className="text-xs text-slate-400 mt-1">
+              Nếu để trống → tự động tính từ ngày bắt đầu
+            </p>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}

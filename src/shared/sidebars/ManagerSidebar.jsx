@@ -22,10 +22,11 @@ export default function ManagerSidebar() {
           <SidebarItem icon="home" label="Home" act="home" navigate={navigate} />
           <SidebarItem icon="group" label="Team & Hiring" active act="team" navigate={navigate} />
           <SidebarItem icon="person_add" label="ATS Pipeline" act="ats" navigate={navigate} />
+          <SidebarItem icon="assignment" label="Requests" act="requests" navigate={navigate} />
           <SidebarItem icon="inbox" label="Notifications / Inbox" act="notifications" navigate={navigate} />
           <SidebarItem icon="auto_awesome" label="Insights" act="insights" navigate={navigate} />
           <SidebarItem icon="settings" label="Settings" act="settings" navigate={navigate} />
-          <SidebarItem icon="check_in_out" label="Check-in" act="checkin" navigate={navigate} />  
+          <SidebarItem icon="check_in_out" label="Check-in" act="checkin" navigate={navigate} />
         </nav>
       </div>
 

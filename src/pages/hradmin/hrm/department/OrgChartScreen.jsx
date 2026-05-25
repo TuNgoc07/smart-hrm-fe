@@ -5,9 +5,11 @@ export default function OrgChartScreen() {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [employees, setEmployees] = useState([]); // Danh sách tất cả employees từ backend
     const [departments, setDepartments] = useState([]); // Danh sách departments từ backend
+    const [teams, setTeams] = useState([]); // Danh sách teams từ backend
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [selectedDepartment, setSelectedDepartment] = useState("all");
+    const [selectedTeam, setSelectedTeam] = useState("all");
 
     // API Base URL từ environment variable
     const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
@@ -20,21 +22,37 @@ export default function OrgChartScreen() {
             try {
                 const headers = { Authorization: `Bearer ${token}` };
 
-                // Fetch tất cả employees (page=0, size lớn để lấy hết)
-                const empRes = await fetch(`${API_BASE_URL}/api/hradmin/employees?page=0&status=active`, { headers });
-                const empData = await empRes.json();
-                console.log("org chart: " + JSON.stringify(empData))
-                if (empData.status === "success") {
-                    // Extract employee list từ paged response
-                    const empList = empData.data?.content || [];
-                    setEmployees(empList);
+                // Fetch tất cả employees bằng cách loop qua các pages
+                let allEmployees = [];
+                let page = 0;
+                let hasMore = true;
+                while (hasMore) {
+                    const empRes = await fetch(`${API_BASE_URL}/api/hradmin/employees?page=${page}&size=100&status=active`, { headers });
+                    const empData = await empRes.json();
+                    if (empData.status === "success") {
+                        const empList = empData.data?.content || [];
+                        allEmployees = [...allEmployees, ...empList];
+                        hasMore = empList.length > 0 && allEmployees.length < empData.data?.totalElements;
+                        page++;
+                    } else {
+                        hasMore = false;
+                    }
                 }
+                console.log("Total employees fetched:", allEmployees.length);
+                setEmployees(allEmployees);
 
                 // Fetch departments để lọc
                 const deptRes = await fetch(`${API_BASE_URL}/api/hradmin/departments/active`, { headers });
                 const deptData = await deptRes.json();
                 if (deptData.status === "success") {
                     setDepartments(deptData.data || []);
+                }
+
+                // Fetch teams để lọc
+                const teamRes = await fetch(`${API_BASE_URL}/api/hradmin/teams/active`, { headers });
+                const teamData = await teamRes.json();
+                if (teamData.status === "success") {
+                    setTeams(teamData.data || []);
                 }
             } catch (err) {
                 console.error("Failed to fetch org chart data:", err);
@@ -45,53 +63,146 @@ export default function OrgChartScreen() {
         fetchData();
     }, []);
 
-    // Xây dựng cây org chart từ danh sách employees
-    // Logic: Tìm employees không có manager (managerId = null) làm root, sau đó đệ quy tìm direct reports
+    // Xây dựng cây org chart theo cấu trúc: Department → Department Manager → Teams → Team Lead → Members
     const buildOrgTree = useCallback(() => {
-        if (!employees.length) return [];
+        if (!departments.length) return [];
 
-        // Tạo map employeeId -> employee để lookup nhanh
-        const empMap = new Map();
+        // Create department nodes from departments data (not just from employees)
+        const deptMap = new Map();
+        departments.forEach(dept => {
+            deptMap.set(dept.deptName, {
+                type: 'department',
+                name: dept.deptName,
+                departmentId: dept.deptId,
+                children: []
+            });
+        });
+
+        // Group employees by Department
         employees.forEach(emp => {
-            empMap.set(emp.employeeInfo?.employeeId, emp);
+            const deptName = emp.employeeInfo?.departmentName || "Unassigned";
+            if (deptMap.has(deptName)) {
+                deptMap.get(deptName).children.push(emp);
+            }
         });
 
-        // Tìm root nodes (employees không có manager hoặc managerId trùng với employeeId - self-reference)
-        const roots = employees.filter(emp => !emp.managerInfo?.managerId || emp.managerInfo?.managerId === emp.employeeInfo?.employeeId);
+        // For each department, build structure
+        deptMap.forEach(dept => {
+            // Find department manager (employee who is manager of this department)
+            const deptData = departments.find(d => d.deptName === dept.name);
+            const deptManager = dept.children.find(emp => {
+                return deptData && deptData.managerId === emp.employeeInfo?.employeeId;
+            });
 
-        // Track visited nodes để tránh cycle
-        const visited = new Set();
+            // Remove manager from children list
+            if (deptManager) {
+                dept.children = dept.children.filter(emp => emp !== deptManager);
+            }
 
-        // Hàm đệ quy để build tree con
-        const buildChildren = (parentId) => {
-            return employees
-                .filter(emp => emp.managerInfo?.managerId === parentId && !visited.has(emp.employeeInfo?.employeeId))
-                .map(emp => {
-                    visited.add(emp.employeeInfo?.employeeId);
-                    return {
-                        ...emp,
-                        children: buildChildren(emp.employeeInfo?.employeeId)
+            // Check if teams data exists and has items for this department
+            const deptTeams = teams.filter(t => t.departmentName === dept.name);
+
+            if (deptTeams && deptTeams.length > 0) {
+                // Build structure: Department Manager + Teams
+                const deptChildren = [];
+
+                // Add Department Manager first
+                if (deptManager) {
+                    deptChildren.push({
+                        type: 'employee',
+                        ...deptManager,
+                        isDeptManager: true
+                    });
+                }
+
+                // For each team in this department
+                deptTeams.forEach(team => {
+                    // Find team members (employees with this teamId)
+                    const teamMembers = dept.children.filter(emp => emp.employeeInfo?.teamId === team.teamId);
+
+                    // Find team lead
+                    const teamLead = teamMembers.find(emp => emp.employeeInfo?.employeeId === team.managerId);
+
+                    // Remove team lead from members
+                    const members = teamMembers.filter(emp => emp.employeeInfo?.employeeId !== team.managerId);
+
+                    // Build team node
+                    const teamNode = {
+                        type: 'team',
+                        name: team.teamName,
+                        teamId: team.teamId,
+                        children: []
                     };
+
+                    // Add team lead if exists
+                    if (teamLead) {
+                        teamNode.children.push({
+                            type: 'employee',
+                            ...teamLead,
+                            isTeamLead: true
+                        });
+                    }
+
+                    // Add team members
+                    members.forEach(member => {
+                        teamNode.children.push({
+                            type: 'employee',
+                            ...member
+                        });
+                    });
+
+                    deptChildren.push(teamNode);
                 });
-        };
 
-        // Build tree từ roots
-        return roots.map(root => {
-            visited.add(root.employeeInfo?.employeeId);
-            return {
-                ...root,
-                children: buildChildren(root.employeeInfo?.employeeId)
-            };
+                // Add employees without team (unassigned)
+                const unassignedEmployees = dept.children.filter(emp => !emp.employeeInfo?.teamId);
+                unassignedEmployees.forEach(emp => {
+                    deptChildren.push({
+                        type: 'employee',
+                        ...emp
+                    });
+                });
+
+                dept.children = deptChildren;
+            } else {
+                // No teams - show Department Manager + Employees directly
+                const deptChildren = [];
+
+                if (deptManager) {
+                    deptChildren.push({
+                        type: 'employee',
+                        ...deptManager,
+                        isDeptManager: true
+                    });
+                }
+
+                dept.children.forEach(emp => {
+                    deptChildren.push({
+                        type: 'employee',
+                        ...emp
+                    });
+                });
+
+                dept.children = deptChildren;
+            }
         });
-    }, [employees]);
 
-    // Filter employees theo search và department
+        // Convert department map to array
+        return Array.from(deptMap.values());
+    }, [departments, employees, teams]);
+
+    // Filter employees theo search, department và team
     const filteredEmployees = useCallback(() => {
         let filtered = employees;
 
         // Filter theo department
         if (selectedDepartment !== "all") {
             filtered = filtered.filter(emp => emp.employeeInfo?.departmentName === selectedDepartment);
+        }
+
+        // Filter theo team
+        if (selectedTeam !== "all") {
+            filtered = filtered.filter(emp => emp.employeeInfo?.teamName === selectedTeam);
         }
 
         // Filter theo search (tên hoặc position)
@@ -104,10 +215,10 @@ export default function OrgChartScreen() {
         }
 
         return filtered;
-    }, [employees, search, selectedDepartment]);
+    }, [employees, search, selectedDepartment, selectedTeam]);
 
     const orgTree = buildOrgTree();
-    const displayEmployees = search || selectedDepartment !== "all" ? filteredEmployees() : employees;
+    const displayEmployees = search || selectedDepartment !== "all" || selectedTeam !== "all" ? filteredEmployees() : orgTree;
 
     return (
       <div className="flex flex-col gap-6">
@@ -119,6 +230,9 @@ export default function OrgChartScreen() {
             departments={departments}
             selectedDepartment={selectedDepartment}
             onDepartmentChange={setSelectedDepartment}
+            teams={teams}
+            selectedTeam={selectedTeam}
+            onTeamChange={setSelectedTeam}
         />
   
         {/* ORG CHART CANVAS */}
@@ -134,6 +248,7 @@ export default function OrgChartScreen() {
             <OrgChartCanvas
                 employees={search || selectedDepartment !== "all" ? buildFlatTree(displayEmployees) : orgTree}
                 onSelect={setSelectedEmployee}
+                teams={teams}
             />
         )}
 
@@ -165,7 +280,7 @@ export default function OrgChartScreen() {
   
   /* ================= CONTROL BAR ================= */
 
-  function ControlBar({ search, onSearchChange, departments, selectedDepartment, onDepartmentChange }) {
+  function ControlBar({ search, onSearchChange, departments, selectedDepartment, onDepartmentChange, teams, selectedTeam, onTeamChange }) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-[300px]">
@@ -179,6 +294,19 @@ export default function OrgChartScreen() {
             {departments.map((dept, index) => (
               <option key={index} value={dept.departmentName}>
                 {dept.departmentName}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedTeam}
+            onChange={(e) => onTeamChange(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+            disabled={selectedDepartment === "all"}
+          >
+            <option key="all" value="all">All Teams</option>
+            {teams.filter(t => selectedDepartment === "all" || t.departmentName === selectedDepartment).map((team, index) => (
+              <option key={index} value={team.teamName}>
+                {team.teamName}
               </option>
             ))}
           </select>
@@ -215,22 +343,62 @@ export default function OrgChartScreen() {
   
   /* ================= ORG CHART ================= */
 
-  function OrgChartCanvas({ employees, onSelect }) {
-    // Render tree structure đệ quy
+  function OrgChartCanvas({ employees, onSelect, teams }) {
+    // Check if employee is a team lead
+    const isTeamLead = (employeeId) => {
+        return teams.some(team => team.managerId === employeeId);
+    };
+
+    // Render tree structure đệ quy cho hierarchy mới
     const renderTree = (node) => {
         if (!node) return null;
 
-        const emp = node.employeeInfo || {};
-        const manager = node.managerInfo || {};
         const hasChildren = node.children && node.children.length > 0;
 
+        // Render dựa trên type của node
+        if (node.type === 'department') {
+            return (
+                <div key={`dept-${node.name}`} className="flex flex-col items-center">
+                    <DepartmentNode name={node.name} />
+                    {hasChildren && (
+                        <>
+                            <VerticalLine />
+                            <div className="flex gap-4 flex-wrap justify-center">
+                                {node.children.map(child => renderTree(child))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        }
+
+        if (node.type === 'team') {
+            return (
+                <div key={`team-${node.name}`} className="flex flex-col items-center">
+                    <TeamNode name={node.name} />
+                    {hasChildren && (
+                        <>
+                            <VerticalLine />
+                            <div className="flex gap-4 flex-wrap justify-center">
+                                {node.children.map(child => renderTree(child))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        }
+
+        // Employee node
+        const emp = node.employeeInfo || node;
+        const manager = node.managerInfo || {};
         return (
             <div key={emp.employeeId} className="flex flex-col items-center">
                 <OrgNode
                     name={emp.employeeName || "Unknown"}
                     title={emp.positionName || "No Position"}
                     avatar={emp.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(emp.employeeName || "Unknown")}
-                    manager={!!manager.managerId} // Có manager thì hiển thị badge Manager
+                    manager={node.isDeptManager || !!manager.managerId}
+                    teamLead={node.isTeamLead || isTeamLead(emp.employeeId)}
                     onClick={() => onSelect({
                         employeeId: emp.employeeId,
                         name: emp.employeeName,
@@ -244,22 +412,12 @@ export default function OrgChartScreen() {
                         status: emp.status,
                     })}
                 />
-
-                {hasChildren && (
-                    <>
-                        <VerticalLine />
-                        <HorizontalLine width={`${node.children.length * 200}px`} />
-                        <div className="flex gap-8">
-                            {node.children.map(child => renderTree(child))}
-                        </div>
-                    </>
-                )}
             </div>
         );
     };
 
     // Nếu là flat list (khi filter), render dạng grid đơn giản
-    if (employees.length > 0 && !employees[0].children) {
+    if (employees.length > 0 && !employees[0].type) {
         return (
             <div className="bg-white border border-slate-200 rounded-xl p-12 overflow-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -273,6 +431,7 @@ export default function OrgChartScreen() {
                                 title={info.positionName || "No Position"}
                                 avatar={info.avatar || "https://ui-avatars.com/api/?name=" + encodeURIComponent(info.employeeName || "Unknown")}
                                 manager={!!manager.managerId}
+                                teamLead={isTeamLead(info.employeeId)}
                                 onClick={() => onSelect({
                                     employeeId: info.employeeId,
                                     name: info.employeeName,
@@ -296,7 +455,7 @@ export default function OrgChartScreen() {
     // Render tree structure (default view)
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-12 overflow-auto">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center gap-8">
                 {employees.map(root => renderTree(root))}
             </div>
         </div>
@@ -305,10 +464,28 @@ export default function OrgChartScreen() {
 
   /* ================= ORG ELEMENTS ================= */
 
-  function OrgNode({ name, title, avatar, manager, onClick }) {
+  function DepartmentNode({ name }) {
+    return (
+      <div className="px-6 py-3 bg-blue-50 border-2 border-blue-200 rounded-lg text-center">
+        <span className="material-symbols-outlined text-blue-600 text-2xl">business</span>
+        <p className="font-bold text-blue-900 text-sm mt-1">{name}</p>
+      </div>
+    );
+  }
+
+  function TeamNode({ name }) {
+    return (
+      <div className="px-6 py-3 bg-purple-50 border-2 border-purple-200 rounded-lg text-center">
+        <span className="material-symbols-outlined text-purple-600 text-2xl">groups</span>
+        <p className="font-bold text-purple-900 text-sm mt-1">{name}</p>
+      </div>
+    );
+  }
+
+  function OrgNode({ name, title, avatar, manager, teamLead, onClick }) {
     return (
       <div
-      onClick={onClick} 
+      onClick={onClick}
       className="w-64 bg-white border border-slate-200 rounded-xl p-4 shadow hover:border-primary transition-all">
         <div className="flex items-center gap-4">
           <img
@@ -316,17 +493,24 @@ export default function OrgChartScreen() {
             alt={name}
             className="w-12 h-12 rounded-full border"
           />
-  
+
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm truncate">{name}</p>
             <p className="text-xs text-slate-500 truncate">{title}</p>
           </div>
-  
-          {manager && (
-            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">
-              Manager
-            </span>
-          )}
+
+          <div className="flex flex-col gap-1">
+            {manager && (
+              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase">
+                Manager
+              </span>
+            )}
+            {teamLead && (
+              <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold uppercase">
+                Team Lead
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );

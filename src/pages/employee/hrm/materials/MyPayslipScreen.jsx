@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+import { fetchMyPayslips, fetchMyPayslipDetail, formatCurrency } from "../../../../utils/employeeApi";
+
 function Breadcrumbs() {
     return (
         <div className="space-y-4">
@@ -16,14 +19,18 @@ function Breadcrumbs() {
     );
 }
 
-function PayslipControls() {
+function PayslipControls({ payslips, selectedId, onSelect }) {
     return (
         <div className="flex items-center gap-4">
-            <div className="w-48">
-                <select className="form-input w-full rounded-lg text-sm border-[#cfdbe7] dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary focus:border-primary">
-                    <option defaultValue="September 2024">September 2024</option>
-                    <option>August 2024</option>
-                    <option>July 2024</option>
+            <div className="w-56">
+                <select
+                    value={selectedId || ""}
+                    onChange={e => onSelect(Number(e.target.value))}
+                    className="form-input w-full rounded-lg text-sm border-[#cfdbe7] dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary focus:border-primary"
+                >
+                    {payslips.map(p => (
+                        <option key={p.payslipId} value={p.payslipId}>{p.cycleName}</option>
+                    ))}
                 </select>
             </div>
             <div className="flex h-7 items-center justify-center gap-x-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-3 border border-emerald-200 dark:border-emerald-800">
@@ -34,56 +41,68 @@ function PayslipControls() {
     );
 }
 
-function Header() {
+function Header({ payslips, selectedId, onSelect }) {
     return (
         <header className="py-4 flex items-center justify-between">
             <Breadcrumbs />
             <div className="flex items-center gap-4">
-                <PayslipControls />
+                <PayslipControls payslips={payslips} selectedId={selectedId} onSelect={onSelect} />
             </div>
         </header>
     );
 }
 
-function DashboardContent() {
+function DashboardContent({ detail, loading }) {
+    if (loading) {
+        return (
+            <div className="flex flex-col gap-6 animate-pulse">
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-8 border border-slate-200 dark:border-slate-800 h-40" />
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border p-6 h-48" />
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border p-6 h-48" />
+                </div>
+            </div>
+        );
+    }
+    if (!detail) {
+        return <div className="p-12 text-center text-slate-400">No payslip data available.</div>;
+    }
     return (
         <div className="flex flex-col gap-6">
-            {/* <!-- Hero Summary Card --> */}
-            <SummaryCard />
-
-            {/* <!-- Breakdown Section --> */}
-            <BreakdownSection />
-
-            {/* Attendance Reference Section */}
-            <AttendanceReferenceSection />
-
-            {/* <!-- Footer Action --> */}
+            <SummaryCard detail={detail} />
+            <BreakdownSection detail={detail} />
+            <AttendanceReferenceSection detail={detail} />
             <Footer />
         </div>
     );
 }
 
 
-function SummaryCard() {
+function SummaryCard({ detail }) {
+    const period = detail.periodStart && detail.periodEnd
+        ? `${detail.periodStart} – ${detail.periodEnd}`
+        : detail.cycleName;
     return (
         <section className="bg-white dark:bg-slate-900 rounded-xl p-8 border border-[#e7edf3] dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20"></div>
             <div className="relative">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Net Salary</p>
-                <h3 className="text-4xl font-extrabold text-[#0d141b] dark:text-white mb-6">18,500,000 <span className="text-lg font-bold text-slate-400">VND</span></h3>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Net Salary — {period}</p>
+                <h3 className="text-4xl font-extrabold text-[#0d141b] dark:text-white mb-6">
+                    {formatCurrency(detail.netSalary)}
+                </h3>
                 <div className="flex flex-wrap gap-8 items-center border-t border-slate-100 dark:border-slate-800 pt-6">
                     <div className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-slate-400">event_available</span>
                         <div>
                             <p className="text-[10px] uppercase text-slate-400 font-bold">Payment Date</p>
-                            <p className="text-sm font-semibold">Oct 05, 2024</p>
+                            <p className="text-sm font-semibold">{detail.lockedAt || "–"}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-slate-400">account_balance</span>
+                        <span className="material-symbols-outlined text-slate-400">trending_up</span>
                         <div>
-                            <p className="text-[10px] uppercase text-slate-400 font-bold">Bank Account</p>
-                            <p className="text-sm font-semibold">Vietcombank • **** 1234</p>
+                            <p className="text-[10px] uppercase text-slate-400 font-bold">Gross Income</p>
+                            <p className="text-sm font-semibold">{formatCurrency(detail.grossIncome)}</p>
                         </div>
                     </div>
                     <div className="ml-auto">
@@ -98,7 +117,19 @@ function SummaryCard() {
     );
 }
 
-function EarningCard() {
+function EarningRow({ label, value }) {
+    if (!value) return null;
+    return (
+        <div className="flex justify-between items-center">
+            <p className="text-sm text-slate-600 dark:text-slate-400">{label}</p>
+            <p className="text-sm font-bold">{formatCurrency(value)}</p>
+        </div>
+    );
+}
+
+function EarningCard({ detail }) {
+    const totalOtPay = (detail.otNormalPay || 0) + (detail.otWeekendPay || 0) + (detail.otHolidayPay || 0);
+    const totalAllowances = (detail.mealAllowance || 0) + (detail.transportAllowance || 0) + (detail.otherAllowances || 0);
     return (
         <div className="bg-emerald-50/30 dark:bg-emerald-900/5 rounded-xl border border-emerald-100 dark:border-emerald-900/30 flex flex-col">
             <div className="p-5 border-b border-emerald-100 dark:border-emerald-900/30">
@@ -108,30 +139,25 @@ function EarningCard() {
                 </h4>
             </div>
             <div className="p-5 flex-1 space-y-4">
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Base Salary</p>
-                    <p className="text-sm font-bold">16,000,000</p>
-                </div>
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Overtime (4.5h)</p>
-                    <p className="text-sm font-bold">1,500,000</p>
-                </div>
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Meal Allowance</p>
-                    <p className="text-sm font-bold">1,000,000</p>
-                </div>
+                <EarningRow label="Base Salary" value={detail.baseSalary} />
+                <EarningRow label="Prorated Salary" value={detail.proratedSalary} />
+                {totalOtPay > 0 && <EarningRow label="Overtime Pay" value={totalOtPay} />}
+                {totalAllowances > 0 && <EarningRow label="Allowances" value={totalAllowances} />}
+                <EarningRow label="Bonus" value={detail.bonus} />
+                <EarningRow label="Commission" value={detail.commission} />
             </div>
             <div className="p-5 bg-emerald-100/50 dark:bg-emerald-900/20 mt-auto rounded-b-xl">
                 <div className="flex justify-between items-center">
-                    <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Total Earnings</p>
-                    <p className="text-lg font-extrabold text-emerald-900 dark:text-emerald-300">18,500,000</p>
+                    <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Gross Income</p>
+                    <p className="text-lg font-extrabold text-emerald-900 dark:text-emerald-300">{formatCurrency(detail.grossIncome)}</p>
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
-function DeductionCard() {
+function DeductionCard({ detail }) {
+    const insurance = (detail.bhxhEmployee || 0) + (detail.bhytEmployee || 0) + (detail.bhtnEmployee || 0);
     return (
         <div className="bg-rose-50/30 dark:bg-rose-900/5 rounded-xl border border-rose-100 dark:border-rose-900/30 flex flex-col">
             <div className="p-5 border-b border-rose-100 dark:border-rose-900/30">
@@ -141,77 +167,63 @@ function DeductionCard() {
                 </h4>
             </div>
             <div className="p-5 flex-1 space-y-4">
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Insurance (Social/Health)</p>
-                    <p className="text-sm font-bold">0</p>
-                </div>
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Personal Income Tax</p>
-                    <p className="text-sm font-bold">0</p>
-                </div>
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Late Penalty (2 incidents)</p>
-                    <p className="text-sm font-bold text-rose-600">0</p>
-                </div>
+                {insurance > 0 && <EarningRow label="Social / Health Insurance" value={insurance} />}
+                <EarningRow label="Personal Income Tax (PIT)" value={detail.pit} />
+                <EarningRow label="Unpaid Leave (LWOP)" value={detail.lwop} />
+                <EarningRow label="Penalty" value={detail.penalty} />
             </div>
             <div className="p-5 bg-rose-100/50 dark:bg-rose-900/20 mt-auto rounded-b-xl">
                 <div className="flex justify-between items-center">
                     <p className="text-sm font-bold text-rose-900 dark:text-rose-300">Total Deductions</p>
-                    <p className="text-lg font-extrabold text-rose-900 dark:text-rose-300">0</p>
+                    <p className="text-lg font-extrabold text-rose-900 dark:text-rose-300">{formatCurrency(detail.totalDeductions)}</p>
                 </div>
             </div>
-        </div>
-    )
-}
-
-function BreakdownSection() {
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* <!-- Earnings Card --> */}
-            <EarningCard />
-
-            {/* <!-- Deductions Card --> */}
-            <DeductionCard />
         </div>
     );
 }
 
-function AttendanceReferenceSection() {
+function BreakdownSection({ detail }) {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <EarningCard detail={detail} />
+            <DeductionCard detail={detail} />
+        </div>
+    );
+}
+
+function AttendanceReferenceSection({ detail }) {
+    const totalOtHours = (detail.otNormalHours || 0) + (detail.otWeekendHours || 0) + (detail.otHolidayHours || 0);
     return (
         <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-[#e7edf3] dark:border-slate-800">
             <div className="flex items-center justify-between mb-6">
-                <h4 className="font-bold text-lg">Attendance Metrics</h4>
-                <button className="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
-                    View Detailed Attendance
-                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </button>
+                <h4 className="font-bold text-lg">OT Breakdown</h4>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg flex items-center gap-4">
                     <div className="size-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                        <span className="material-symbols-outlined">work</span>
+                        <span className="material-symbols-outlined">timer</span>
                     </div>
                     <div>
-                        <p className="text-xs text-slate-500 font-medium uppercase">Working Days</p>
-                        <p className="text-xl font-bold">22 Days</p>
+                        <p className="text-xs text-slate-500 font-medium uppercase">Normal OT</p>
+                        <p className="text-xl font-bold">{detail.otNormalHours || 0}h</p>
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg flex items-center gap-4">
                     <div className="size-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                        <span className="material-symbols-outlined">beach_access</span>
+                        <span className="material-symbols-outlined">weekend</span>
                     </div>
                     <div>
-                        <p className="text-xs text-slate-500 font-medium uppercase">Paid Leave</p>
-                        <p className="text-xl font-bold">2 Days</p>
+                        <p className="text-xs text-slate-500 font-medium uppercase">Weekend OT</p>
+                        <p className="text-xl font-bold">{detail.otWeekendHours || 0}h</p>
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg flex items-center gap-4">
                     <div className="size-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                        <span className="material-symbols-outlined">timer</span>
+                        <span className="material-symbols-outlined">celebration</span>
                     </div>
                     <div>
-                        <p className="text-xs text-slate-500 font-medium uppercase">OT Hours</p>
-                        <p className="text-xl font-bold">4.5 Hours</p>
+                        <p className="text-xs text-slate-500 font-medium uppercase">Holiday OT</p>
+                        <p className="text-xl font-bold">{detail.otHolidayHours || 0}h</p>
                     </div>
                 </div>
             </div>
@@ -235,13 +247,36 @@ function Footer() {
 }
 
 export default function MyPayslipScreen() {
+    const [payslips, setPayslips] = useState([]);
+    const [selectedId, setSelectedId] = useState(null);
+    const [detail, setDetail] = useState(null);
+    const [listLoading, setListLoading] = useState(true);
+    const [detailLoading, setDetailLoading] = useState(false);
+
+    useEffect(() => {
+        fetchMyPayslips()
+            .then(res => {
+                const list = res.data || [];
+                setPayslips(list);
+                if (list.length > 0) setSelectedId(list[0].payslipId);
+            })
+            .catch(console.error)
+            .finally(() => setListLoading(false));
+    }, []);
+
+    useEffect(() => {
+        if (!selectedId) return;
+        setDetailLoading(true);
+        fetchMyPayslipDetail(selectedId)
+            .then(res => setDetail(res.data))
+            .catch(console.error)
+            .finally(() => setDetailLoading(false));
+    }, [selectedId]);
+
     return (
         <main className="flex-1 flex flex-col overflow-y-auto">
-            {/* <!-- Header --> */}
-            <Header />
-
-            {/* <!-- Dashboard Content --> */}
-            <DashboardContent />
+            <Header payslips={payslips} selectedId={selectedId} onSelect={setSelectedId} />
+            <DashboardContent detail={detail} loading={listLoading || detailLoading} />
         </main>
-    )
+    );
 }

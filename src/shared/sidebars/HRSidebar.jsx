@@ -64,6 +64,10 @@ export default function HRSidebar() {
               <span className="material-symbols-outlined text-lg mr-2">work</span>
               Jobs
             </NavLink>
+            <NavLink to="/hr/teams" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">work</span>
+              Team
+            </NavLink>
           </div>
         </div>
 
@@ -117,6 +121,10 @@ export default function HRSidebar() {
             <NavLink to="/hr/holiday-calendar" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
               <span className="material-symbols-outlined text-lg mr-2">event</span>
               Holiday Calendar
+            </NavLink>
+            <NavLink to="/hr/attendance-period-config" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">date_range</span>
+              Attendance Period Config
             </NavLink>
           </div>
         </div>

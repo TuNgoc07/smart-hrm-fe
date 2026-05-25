@@ -19,19 +19,80 @@ const EXCEPTION_CFG = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
 /* ─── Main Screen ──────────────────────────────────────────────── */
 export default function TeamAttendanceScreen() {
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
 
+  /* ── View mode toggle: "daily" (existing) | "period" (new) ── */
+  const [viewMode, setViewMode] = useState("daily");
+
+  /* ── Daily mode state (existing) ── */
   const [selectedDate, setSelectedDate] = useState(today);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [search, setSearch] = useState("");
 
+  /* ── Period mode state (new) ── */
+  const [cycles, setCycles] = useState([]);
+  const [cyclesLoading, setCyclesLoading] = useState(false);
+  const [selectedCycle, setSelectedCycle] = useState(null);
+  const [periodData, setPeriodData] = useState(null);
+  const [periodLoading, setPeriodLoading] = useState(false);
+  const [periodPage, setPeriodPage] = useState(0);
+  const [periodSearch, setPeriodSearch] = useState("");
+
   useEffect(() => { fetchData(selectedDate); }, [selectedDate]);
+
+  /* ── Period mode: load cycles on first switch ── */
+  useEffect(() => {
+    if (viewMode !== "period" || cycles.length > 0) return;
+    setCyclesLoading(true);
+    fetch(`${API_BASE_URL}/api/manager/attendance/cycles`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(json => {
+        const list = json.status === "success" ? json.data : [];
+        setCycles(list);
+        const current = list.find(c => c.isCurrent) || list[0];
+        setSelectedCycle(current || null);
+      })
+      .catch(console.error)
+      .finally(() => setCyclesLoading(false));
+  }, [viewMode]);
+
+  /* ── Period mode: fetch period-records when cycle changes ── */
+  useEffect(() => {
+    if (viewMode !== "period" || !selectedCycle) return;
+    setPeriodLoading(true);
+    setPeriodPage(0);
+    fetch(
+      `${API_BASE_URL}/api/manager/attendance/period-records?startDate=${selectedCycle.startDate}&endDate=${selectedCycle.endDate}&page=0`,
+      { headers: authHeaders() }
+    )
+      .then(r => r.json())
+      .then(json => setPeriodData(json.status === "success" ? json.data : null))
+      .catch(console.error)
+      .finally(() => setPeriodLoading(false));
+  }, [viewMode, selectedCycle]);
+
+  /* ── Period mode: paginate ── */
+  const handlePeriodPageChange = (newPage) => {
+    if (!selectedCycle) return;
+    setPeriodLoading(true);
+    fetch(
+      `${API_BASE_URL}/api/manager/attendance/period-records?startDate=${selectedCycle.startDate}&endDate=${selectedCycle.endDate}&page=${newPage}`,
+      { headers: authHeaders() }
+    )
+      .then(r => r.json())
+      .then(json => {
+        if (json.status === "success") { setPeriodData(json.data); setPeriodPage(newPage); }
+      })
+      .catch(console.error)
+      .finally(() => setPeriodLoading(false));
+  };
 
   const fetchData = async (date) => {
     setLoading(true);
@@ -90,6 +151,14 @@ export default function TeamAttendanceScreen() {
     return matchFilter && matchSearch;
   }), [rows, activeFilter, search]);
 
+  /* ── Filter period employees client-side ── */
+  const filteredPeriodEmployees = (periodData?.employees || []).filter(e => {
+    const name = e.employeeName?.toLowerCase() || "";
+    const id   = String(e.employeeId || "");
+    const q    = periodSearch.toLowerCase();
+    return q === "" || name.includes(q) || id.includes(q);
+  });
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -99,14 +168,20 @@ export default function TeamAttendanceScreen() {
   return (
     <div className="space-y-8 mx-auto w-full">
 
-      {/* ── Header ── */}
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight">Team Attendance</h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">
-            {data?.teamName ?? "Loading…"}
-          </p>
-        </div>
+      {/* ── View Mode Toggle ── */}
+      <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
+
+      {viewMode === "daily" ? (
+        /* ════════ DAILY MODE (existing) ════════ */
+        <>
+          {/* ── Header ── */}
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black tracking-tight">Team Attendance</h2>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">
+                {data?.teamName ?? "Loading…"}
+              </p>
+            </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Date Nav */}
@@ -215,6 +290,23 @@ export default function TeamAttendanceScreen() {
             {pendingApprovals.map((req) => <RequestCard key={req.requestId} request={req} />)}
           </div>
         </section>
+      )}
+        </>
+      ) : (
+        /* ════════ PERIOD MODE (new) ════════ */
+        <PeriodView
+          cycles={cycles}
+          cyclesLoading={cyclesLoading}
+          selectedCycle={selectedCycle}
+          setSelectedCycle={setSelectedCycle}
+          periodData={periodData}
+          periodLoading={periodLoading}
+          periodPage={periodPage}
+          onPageChange={handlePeriodPageChange}
+          search={periodSearch}
+          setSearch={setPeriodSearch}
+          employees={filteredPeriodEmployees}
+        />
       )}
     </div>
   );
@@ -434,4 +526,256 @@ function Avatar({ name, avatarUrl, size }) {
       {initials}
     </div>
   );
+}
+
+/* ================= VIEW MODE TOGGLE ================= */
+
+function ViewModeToggle({ viewMode, setViewMode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Team Attendance</h1>
+        <p className="text-xs text-slate-500 mt-0.5">
+          {viewMode === "daily"
+            ? "Live / historical daily check-in view"
+            : "Period summary — aggregated per team member"}
+        </p>
+      </div>
+      <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+        <button
+          onClick={() => setViewMode("daily")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            viewMode === "daily"
+              ? "bg-white dark:bg-slate-700 text-primary shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">today</span>
+          Daily
+        </button>
+        <button
+          onClick={() => setViewMode("period")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            viewMode === "period"
+              ? "bg-white dark:bg-slate-700 text-primary shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">date_range</span>
+          Period
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ================= PERIOD VIEW ================= */
+
+function PeriodView({
+  cycles, cyclesLoading, selectedCycle, setSelectedCycle,
+  periodData, periodLoading, periodPage, onPageChange,
+  search, setSearch, employees,
+}) {
+  const stats   = periodData?.stats || {};
+  const fmtDate = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+  return (
+    <div className="space-y-6">
+      {/* ── Period Selector Bar ── */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-primary">date_range</span>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Payroll Period</p>
+            {selectedCycle && (
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                {fmtDate(selectedCycle.startDate)} – {fmtDate(selectedCycle.endDate)}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search employee..."
+              className="pl-9 pr-4 h-10 w-48 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          {/* Cycle dropdown */}
+          {cyclesLoading ? (
+            <div className="h-10 w-52 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+          ) : (
+            <select
+              value={selectedCycle ? `${selectedCycle.startDate}|${selectedCycle.endDate}` : ""}
+              onChange={e => {
+                const [start, end] = e.target.value.split("|");
+                const found = cycles.find(c => c.startDate === start && c.endDate === end);
+                if (found) setSelectedCycle(found);
+              }}
+              className="h-10 px-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 font-medium"
+            >
+              {cycles.map(c => (
+                <option key={`${c.startDate}|${c.endDate}`} value={`${c.startDate}|${c.endDate}`}>
+                  {c.label}{c.isCurrent ? " (Current)" : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* ── Period Stats Grid ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <PeriodStatCard icon="groups"      label="Team Members" value={stats.totalEmployees ?? "—"} />
+        <PeriodStatCard icon="task_alt"    label="Avg. Present"  value={stats.avgPresentRate != null ? `${stats.avgPresentRate}%` : "—"} green />
+        <PeriodStatCard icon="schedule"    label="Late Days"     value={stats.totalLateDays ?? "—"} warning />
+        <PeriodStatCard icon="event_busy"  label="Absent Days"   value={stats.totalAbsentDays ?? "—"} danger />
+        <PeriodStatCard icon="beach_access" label="Leave Days"   value={stats.totalLeaveDays ?? "—"} blue />
+        <PeriodStatCard icon="more_time"   label="OT Hours"      value={stats.totalOtHours != null ? `${stats.totalOtHours}h` : "—"} purple />
+      </div>
+
+      {/* ── Per-Employee Summary Table ── */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-slate-50 dark:bg-slate-800 border-b text-xs font-bold uppercase text-slate-500">
+            <tr>
+              <Th>Employee</Th>
+              <Th center>Present</Th>
+              <Th center>Late</Th>
+              <Th center>Absent</Th>
+              <Th center>Leave</Th>
+              <Th center>OT</Th>
+              <Th center>Attendance %</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {periodLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  {Array.from({ length: 7 }).map((__, j) => (
+                    <td key={j} className="px-6 py-4">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : employees.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-16 text-center text-slate-400">
+                  <span className="material-symbols-outlined text-4xl mb-2 block">inbox</span>
+                  No attendance data for this period.
+                </td>
+              </tr>
+            ) : (
+              employees.map(emp => (
+                <PeriodEmployeeRow key={emp.employeeId} emp={emp} />
+              ))
+            )}
+          </tbody>
+        </table>
+        {/* Pagination */}
+        {periodData && periodData.totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-xs text-slate-500">
+              {periodData.totalElements} team members · Page {periodPage + 1} of {periodData.totalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onPageChange(periodPage - 1)}
+                disabled={periodPage === 0}
+                className="px-3 py-1.5 rounded-lg border text-sm font-semibold disabled:opacity-40 hover:bg-slate-100"
+              >← Prev</button>
+              <button
+                onClick={() => onPageChange(periodPage + 1)}
+                disabled={periodPage >= periodData.totalPages - 1}
+                className="px-3 py-1.5 rounded-lg border text-sm font-semibold disabled:opacity-40 hover:bg-slate-100"
+              >Next →</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PeriodStatCard({ icon, label, value, green, warning, danger, blue, purple }) {
+  const color = green   ? "text-green-600 bg-green-50"
+    : warning ? "text-amber-600 bg-amber-50"
+    : danger  ? "text-red-600 bg-red-50"
+    : blue    ? "text-blue-600 bg-blue-50"
+    : purple  ? "text-purple-600 bg-purple-50"
+    : "text-primary bg-primary/10";
+  const textColor = green ? "text-green-700" : warning ? "text-amber-700" : danger ? "text-red-700"
+    : blue ? "text-blue-700" : purple ? "text-purple-700" : "text-slate-900";
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">{label}</span>
+        <span className={`material-symbols-outlined text-[18px] p-1.5 rounded-lg ${color}`}>{icon}</span>
+      </div>
+      <p className={`text-2xl font-black ${textColor} dark:text-white`}>{value}</p>
+    </div>
+  );
+}
+
+function PeriodEmployeeRow({ emp }) {
+  const rateBg = emp.presentRate >= 90 ? "bg-green-100 text-green-700"
+    : emp.presentRate >= 75 ? "bg-amber-100 text-amber-700"
+    : "bg-red-100 text-red-700";
+
+  return (
+    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+      <Td>
+        <div className="flex items-center gap-3">
+          <img
+            src={emp.avatar || "https://randomuser.me/api/portraits/men/45.jpg"}
+            alt={emp.employeeName}
+            className="w-9 h-9 rounded-full border object-cover"
+          />
+          <div>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{emp.employeeName}</p>
+            <p className="text-xs text-slate-400">{emp.department || `#EMP${emp.employeeId}`}</p>
+          </div>
+        </div>
+      </Td>
+      <Td center><span className="font-bold text-green-700">{emp.presentDays}</span></Td>
+      <Td center>
+        {emp.lateDays > 0
+          ? <span className="text-amber-600 font-bold">{emp.lateDays}</span>
+          : <span className="text-slate-400">—</span>}
+      </Td>
+      <Td center>
+        {emp.absentDays > 0
+          ? <span className="text-red-600 font-bold">{emp.absentDays}</span>
+          : <span className="text-slate-400">—</span>}
+      </Td>
+      <Td center>
+        {emp.leaveDays > 0
+          ? <span className="text-blue-600 font-bold">{emp.leaveDays}</span>
+          : <span className="text-slate-400">—</span>}
+      </Td>
+      <Td center>
+        <span className="text-purple-600 font-medium">
+          {emp.totalOtMinutes > 0 ? `${Math.round(emp.totalOtMinutes / 60 * 10) / 10}h` : "—"}
+        </span>
+      </Td>
+      <Td center>
+        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${rateBg}`}>
+          {emp.presentRate}%
+        </span>
+      </Td>
+    </tr>
+  );
+}
+
+function Th({ children, center }) {
+  return <th className={`px-6 py-4 ${center ? "text-center" : ""}`}>{children}</th>;
+}
+
+function Td({ children, className = "", center }) {
+  return <td className={`px-6 py-4 text-sm ${center ? "text-center" : ""} ${className}`}>{children}</td>;
 }

@@ -21,11 +21,13 @@ import PayrollCalculationScreen from "../pages/hradmin/hrm/payhub/PayrollCalcula
 import PayrollResultScreen from "../pages/hradmin/hrm/payhub/PayrollResultScreen";
 import PayslipHistoryScreen from "../pages/hradmin/hrm/payhub/PayslipHistoryScreen";
 import PayrollConfigurationScreen from "../pages/hradmin/hrm/payhub/PayrollConfigurationScreen";
+import AttendancePeriodConfigScreen from "../pages/hradmin/hrm/payhub/AttendancePeriodConfigScreen";
 import HolidayCalendarScreen from "../pages/hradmin/hrm/payhub/HolidayCalendarScreen";
 import AIInsightsDashboard from "../pages/hradmin/hrm/intelligence/insights/AIInsightScreen";
 import AutomationRulesScreen from "../pages/hradmin/hrm/intelligence/automation/AutomationRuleScreen";
 import SupportHubScreen from "../common/SupportHubScreen";
 import ContractTemplateListScreen from "../pages/hradmin/hrm/contract/ContractTemplateListScreen";
+import TeamListScreen from "../pages/hradmin/hrm/department/TeamListScreen";
 
 export default function HRAdminRoutes(){
     return (
@@ -39,6 +41,7 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/department-list" element={<DepartmentListScreen />} />
                 <Route path="/hr/position-list" element={<PositionListScreen />} />
                 <Route path="/hr/jobs" element={<JobListScreen />} />
+                <Route path="/hr/teams" element={<TeamListScreen />} /> 
                 <Route path="/hr/contract-list" element={<ContractListScreen />} />
                 <Route path="/hr/contract-templates" element={<ContractTemplateListScreen />} />
                 <Route path="/hr/org-chart" element={<OrgChartScreen/>} />
@@ -54,6 +57,8 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/payroll-results" element={<PayrollResultScreen />} />
                 <Route path="/hr/payslip-history" element={<PayslipHistoryScreen />} />
                 <Route path="/hr/payroll-config" element={<PayrollConfigurationScreen />} />
+                {/* Cấu hình kỳ chấm công — HR Admin config ngày bắt đầu kỳ 1 lần duy nhất */}
+                <Route path="/hr/attendance-period-config" element={<AttendancePeriodConfigScreen />} />
                 <Route path="/hr/holiday-calendar" element={<HolidayCalendarScreen />} />
                 <Route path="/hr/ai-insights" element={<AIInsightsDashboard />} />
                 <Route path="/hr/ai-assistant" element={<SupportHubScreen />} />

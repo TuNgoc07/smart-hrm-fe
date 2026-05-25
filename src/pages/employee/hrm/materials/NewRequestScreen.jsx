@@ -8,13 +8,21 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, ''
 
 /**
  * Lấy employeeId từ JWT token trong localStorage.
- * Backend encode employeeId vào claim "sub" khi issue token.
+ * Backend encode userId vào claim "sub" khi issue token.
+ * Frontend có thể lưu employeeId trực tiếp hoặc parse từ token.
  */
 function getEmployeeIdFromToken() {
   try {
+    // Ưu tiên lấy employeeId trực tiếp từ localStorage (nếu backend đã trả về)
+    const directEmployeeId = localStorage.getItem('employeeId');
+    if (directEmployeeId) return parseInt(directEmployeeId, 10);
+
+    // Fallback: parse từ JWT token
     const token = localStorage.getItem('token');
     if (!token) return null;
     const payload = JSON.parse(atob(token.split('.')[1]));
+    // Backend trả về userId trong "sub", cần gọi API để lấy employeeId
+    // Hoặc nếu backend encode employeeId trực tiếp vào token
     return payload.employeeId || payload.sub || null;
   } catch {
     return null;
@@ -243,12 +251,13 @@ export default function NewRequestScreen() {
   const [formData, setFormData] = useState({
     // Leave Request fields
     leaveType: "",
-    policyId: null,  // ← THÊM MỚI
+    policyId: null,
     startDate: "",
     endDate: "",
+    durationUnit: "full_day",
     // OT Request fields
     otDate: "",
-    dayType: "",   // auto-detect bởi OTRequestForm khi chọn ngày
+    dayType: "",
     startTime: "",
     endTime: "",
     // Adjustment Request fields
@@ -270,6 +279,7 @@ export default function NewRequestScreen() {
       policyId: null,
       startDate: "",
       endDate: "",
+      durationUnit: "full_day",
       otDate: "",
       dayType: "",
       startTime: "",
@@ -291,6 +301,7 @@ export default function NewRequestScreen() {
       policyId: null,
       startDate: "",
       endDate: "",
+      durationUnit: "full_day",
       otDate: "",
       dayType: "",
       startTime: "",
@@ -325,37 +336,71 @@ export default function NewRequestScreen() {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       };
 
+      // Fetch workflowId by request type
+      // Map frontend types to database workflow types
+      const requestTypeMap = {
+        'LEAVE': 'leave_request',
+        'OT': 'ot',
+        'ADJUSTMENT': 'adjustment_request'
+      };
+      const dbRequestType = requestTypeMap[selectedType] || selectedType.toLowerCase();
+      const workflowRes = await fetch(`${API_BASE_URL}/api/workflows/by-type?requestType=${dbRequestType}`, { headers });
+      if (!workflowRes.ok) {
+        alert('❌ Không tìm thấy workflow cấu hình cho loại request này. Vui lòng liên hệ HR Admin.');
+        setSubmitting(false);
+        return;
+      }
+      const workflow = await workflowRes.json();
+      const workflowId = workflow.workflowId;
+
       let url, payload;
       if (selectedType === 'LEAVE') {
         url = `${API_BASE_URL}/api/employee/requests/leave`;
         payload = {
           employeeId,
-          workflowId: 1, // TODO: fetch đúng workflowId từ workflow config
+          workflowId,
           title: `Leave Request - ${formData.leaveType}`,
           description: formData.reason,
           leaveType: formData.leaveType,
-          policyId: formData.policyId,  // ← THÊM MỚI
+          policyId: formData.policyId,
           startDate: formData.startDate,
           endDate: formData.endDate,
           durationDays: formData.duration || 1,
-          durationUnit: 'day',
+          durationUnit: formData.durationUnit || 'full_day',
           reason: formData.reason,
         };
       } else if (selectedType === 'OT') {
         url = `${API_BASE_URL}/api/employee/requests/ot`;
         payload = {
           employeeId,
-          workflowId: 2, // TODO: fetch đúng workflowId từ workflow config
+          workflowId,
           title: `OT Request - ${formData.otDate}`,
           description: formData.reason,
           otDate: formData.otDate,
           startTime: formData.startTime,
           endTime: formData.endTime,
           reason: formData.reason,
-          dayType: formData.dayType || '', // backend sẽ verify lại
+          dayType: formData.dayType || '',
+        };
+      } else if (selectedType === 'ADJUSTMENT') {
+        if (!formData.adjustmentType || !formData.adjustmentDate || !formData.adjustedTime) {
+          alert('Vui lòng chọn loại điều chỉnh, ngày và giờ.');
+          setSubmitting(false);
+          return;
+        }
+        url = `${API_BASE_URL}/api/employee/requests/adjustment`;
+        payload = {
+          employeeId,
+          workflowId,
+          title: `Adjustment Request - ${formData.adjustmentType} - ${formData.adjustmentDate}`,
+          description: formData.reason,
+          adjustmentType: formData.adjustmentType,
+          date: formData.adjustmentDate,
+          originalTime: formData.originalTime || null,
+          adjustedTime: formData.adjustedTime,
+          reason: formData.reason,
         };
       } else {
-        alert('Tính năng này đang phát triển.');
         setSubmitting(false);
         return;
       }

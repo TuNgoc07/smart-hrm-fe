@@ -14,6 +14,7 @@ export default function NewPositionModal({ position, onClose, onSaved }) {
     jobId: "",
     jobLevel: "",
     headcount: "1",
+    teamId: "", // Team được config cho position này
     salaryTierId: "", // Salary tier được config cho position này
     description: "",
   });
@@ -21,6 +22,7 @@ export default function NewPositionModal({ position, onClose, onSaved }) {
   const [error, setError] = useState("");
   const [departments, setDepartments] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [salaryTiers, setSalaryTiers] = useState([]);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function NewPositionModal({ position, onClose, onSaved }) {
         jobId: position.jobId ? String(position.jobId) : "",
         jobLevel: position.level || "",
         headcount: position.headcount ? String(position.headcount) : "1",
+        teamId: position.teamId ? String(position.teamId) : "",
         salaryTierId: position.salaryTierId ? String(position.salaryTierId) : "",
         description: "",
       });
@@ -55,6 +58,21 @@ export default function NewPositionModal({ position, onClose, onSaved }) {
     };
     fetchDropdowns().catch(() => {});
   }, []);
+
+  // Fetch teams when department changes
+  useEffect(() => {
+    const fetchTeams = async () => {
+      if (!form.departmentId) {
+        setTeams([]);
+        return;
+      }
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/teams/department/${form.departmentId}`, { headers });
+      const data = await res.json();
+      if (data.status === "success") setTeams(data.data || []);
+    };
+    fetchTeams().catch(() => {});
+  }, [form.departmentId, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -87,6 +105,7 @@ export default function NewPositionModal({ position, onClose, onSaved }) {
           jobId: Number(form.jobId),
           jobLevel: form.jobLevel || null,
           headcount: form.headcount ? Number(form.headcount) : 1,
+          teamId: form.teamId ? Number(form.teamId) : null, // Gửi team được config
           salaryTierId: form.salaryTierId ? Number(form.salaryTierId) : null, // Gửi salary tier được config
           description: form.description || null,
         }),
@@ -210,6 +229,29 @@ export default function NewPositionModal({ position, onClose, onSaved }) {
                   className="w-full h-11 rounded-lg border px-4 text-sm focus:ring-2 focus:ring-primary/20"
                 />
               </div>
+            </div>
+
+            {/* Team */}
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">
+                Team
+                <span className="ml-1 text-slate-400 font-normal normal-case">– gán vị trí vào team (nếu có)</span>
+              </label>
+              <select
+                name="teamId"
+                value={form.teamId}
+                onChange={handleChange}
+                disabled={!form.departmentId}
+                className="w-full h-11 rounded-lg border bg-white px-4 text-sm focus:ring-2 focus:ring-primary/20 disabled:bg-slate-50 disabled:text-slate-400"
+              >
+                <option value="">— No Team —</option>
+                {teams.map((t) => (
+                  <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
+                ))}
+              </select>
+              {!form.departmentId && (
+                <p className="text-xs text-slate-400 mt-1">Select a department first to see available teams</p>
+              )}
             </div>
 
             {/* Salary Tier */}

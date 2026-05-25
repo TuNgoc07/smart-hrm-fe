@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchMyProfile, fetchMyLeaveBalances } from "../../../../utils/employeeApi";
 import JobDetailsTab from "./tabs/JDTab";
 import ProfileTab from "./tabs/ProfileTab";
 import ContractTab from "./tabs/ContractTab";
@@ -8,6 +9,8 @@ import CompensationTab from "./tabs/CompensationTab";
 export default function ProfileScreen() {
     const { emp_id } = useParams();
     const [activeTab, setActiveTab] = useState("profile");
+    const [employee, setEmployee] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const TABS = [
         { key: "profile", label: "Profile" },
@@ -16,73 +19,81 @@ export default function ProfileScreen() {
         { key: "compensation", label: "Compensation" },
     ];
 
-    const employee = {
-        id: emp_id,
-        name: "Nguyễn Văn A",
-        code: "NV1234",
-        position: "Senior Product Designer",
-        status: "Active",
-        avatar:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuBq3GcFOTgS_aEoggqdDrQ7w_cmDaIVLPt3HIS-xYtaeXttRtMDtmIgg4CKv0iZIyze4jDXhWk18HpAceDAK4y9ldi3BQLJncy26oUsnwSiyX9p-bHcZ7pmdm9CHf1OGqxiiJJWzBdmQfYizSAHyOtb9rnj7-sTOap6wbYqYOYF5s8OsR5dPOcJvOlQq2M4Y67_g2cazbwGC7X7ovDEBGGmLUacme8w-lJOMDOWi_aAs2iXobZMcLNkBjPFVl2D-Tve-vM-7xWDq38",
-        general: {
-            dob: "15 May, 1992",
-            gender: "Male",
-            nationality: "Vietnamese",
-            marital: "Single",
-        },
-        contact: {
-            personalEmail: "nguyen.a@gmail.com",
-            workEmail: "a.nguyen@smartent.com",
-            phone: "+84 908 123 456",
-            linkedin: "/in/nguyen-a-design",
-        },
-        identification: {
-            idNumber: "001092837465",
-            issueDate: "20 Dec, 2018",
-            place: "Police Dept. of Residence",
-        },
-        address: {
-            permanent:
-                "123 Nguyen Hue St, Ward 1, District 1, Ho Chi Minh City, Vietnam",
-            current:
-                "456 Le Loi Blvd, Ward 4, District 3, Ho Chi Minh City, Vietnam",
-        },
-    };
+    useEffect(() => {
+        fetchMyProfile()
+            .then(res => {
+                const p = res.data?.profile || {};
+                const j = res.data?.jobInfo || {};
+                setEmployee({
+                    id: res.data?.employeeId,
+                    name: p.employeeName || "–",
+                    code: `EMP-${res.data?.employeeId || ""}`,
+                    position: p.positionName || j.positionInfo?.[0]?.positionName || "–",
+                    department: p.departmentName || j.departmentInfo?.departmentName || "–",
+                    team: p.teamName || "–",
+                    status: p.status || "Active",
+                    avatar: p.avatar || null,
+                    general: {
+                        dob: p.birthday || "–",
+                        gender: p.gender || "–",
+                        nationality: p.nationality || "–",
+                        marital: p.maritalStatus || "–",
+                    },
+                    contact: {
+                        personalEmail: p.personalEmail || "–",
+                        workEmail: p.workEmail || "–",
+                        phone: p.phoneNumber || "–",
+                        linkedin: p.linkedln || "–",
+                    },
+                    identification: {
+                        idNumber: p.identificationCode || "–",
+                        issueDate: p.issueDate || "–",
+                        place: p.issuePlace || "–",
+                    },
+                    address: {
+                        permanent: p.permanentAddress || "–",
+                        current: p.currentAddress || "–",
+                    },
+                    jobInfo: j,
+                });
+            })
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="w-full px-6 space-y-6 animate-pulse">
+                <div className="h-4 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="bg-white dark:bg-slate-900 rounded-xl border p-6 flex gap-6">
+                    <div className="w-28 h-28 rounded-full bg-slate-200 dark:bg-slate-700" />
+                    <div className="flex-1 space-y-3 pt-3">
+                        <div className="h-6 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
+                        <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700 rounded" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!employee) {
+        return <div className="p-8 text-center text-slate-400">Failed to load profile.</div>;
+    }
 
     return (
         <div className="w-full px-6 space-y-6">
-            {/* BREADCRUMB */}
             <BreadCrumb employee={employee} />
-
-            {/* ===== PROFILE HEADER + TABS ===== */}
-            <div className="bg-white rounded-xl border overflow-hidden">
-                {/* PROFILE */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <ProfileHeader employee={employee} />
-
-                {/* ===== NAV TABS ===== */}
                 <Tab TABS={TABS} activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
-
-            {/* ===== TAB CONTENT ===== */}
-            {activeTab === "profile" && (
-                <ProfileTab employee={employee} />
-            )}
-
-            {activeTab === "job" && (
-                <JobDetailsTab employee={employee} />
-            )}
-            {activeTab === "compensation" && (
-                <CompensationTab />
-            )}
-            {activeTab === "contract" && (
-                <ContractTab />
-            )}
-            
-
-            {/* FOOTER */}
+            {activeTab === "profile" && <ProfileTab employee={employee} />}
+            {activeTab === "job" && <JobDetailsTab employee={employee} />}
+            {activeTab === "compensation" && <CompensationTab />}
+            {activeTab === "contract" && <ContractTab />}
             <div className="flex justify-between text-xs text-slate-500 pt-6">
-                <p>Last updated: 2 hours ago by Admin Jane Doe</p>
-                <p>Employee since October 12, 2021</p>
+                <p>Profile data loaded from HR system</p>
+                <p>{employee.department} · {employee.team}</p>
             </div>
         </div>
     );

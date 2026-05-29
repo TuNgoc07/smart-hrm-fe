@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchNotifications, markAsRead, markAllAsRead, fetchUnreadCountByType } from '../services/notificationService';
+import { fetchHrAdminNotifications, markHrAdminAsRead, markAllHrAdminAsRead, fetchHrAdminUnreadCountByType } from '../services/notificationService';
 
 const POLL_INTERVAL = 30000;
 
@@ -24,11 +24,11 @@ const playNotificationSound = () => {
     }
 };
 
-export default function useNotificationPolling(typeFilter = "all") {
+export default function useHrAdminNotificationPolling(typeFilter = "all") {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [unreadCounts, setUnreadCounts] = useState({ approval: 0, alert: 0, info: 0, total: 0 });
+    const [unreadCounts, setUnreadCounts] = useState({ request: 0, attendance: 0, checklist: 0, system: 0, total: 0 });
     const prevUnreadCountRef = useRef(null);
     const hasInteractedRef = useRef(false);
 
@@ -44,7 +44,7 @@ export default function useNotificationPolling(typeFilter = "all") {
 
     const fetchAndUpdate = useCallback(async () => {
         try {
-            const data = await fetchNotifications(typeFilter);
+            const data = await fetchHrAdminNotifications(typeFilter);
             const currentUnread = data.filter(n => !n.read).length;
 
             if (
@@ -61,7 +61,7 @@ export default function useNotificationPolling(typeFilter = "all") {
 
             // Fetch unread counts by type
             try {
-                const counts = await fetchUnreadCountByType();
+                const counts = await fetchHrAdminUnreadCountByType();
                 setUnreadCounts(counts);
             } catch (err) {
                 console.warn('Failed to fetch unread counts by type:', err);
@@ -81,7 +81,7 @@ export default function useNotificationPolling(typeFilter = "all") {
 
     const handleMarkAsRead = useCallback(async (id) => {
         try {
-            await markAsRead(id);
+            await markHrAdminAsRead(id);
             setNotifications(prev =>
                 prev.map(n => n.id === id ? { ...n, read: true } : n)
             );
@@ -96,7 +96,7 @@ export default function useNotificationPolling(typeFilter = "all") {
 
     const handleMarkAllAsRead = useCallback(async () => {
         try {
-            await markAllAsRead();
+            await markAllHrAdminAsRead();
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             prevUnreadCountRef.current = 0;
             fetchAndUpdate(); // Refresh counts

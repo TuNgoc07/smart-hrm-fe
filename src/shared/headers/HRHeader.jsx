@@ -1,4 +1,10 @@
+import { useNavigate } from 'react-router-dom';
+import useHrAdminNotificationPolling from '../../hooks/useHrAdminNotificationPolling';
+
 export default function HRHeader() {
+    const navigate = useNavigate();
+    const { unreadCount } = useHrAdminNotificationPolling("all");
+
     return (
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b px-8 py-4">
         <div className="flex justify-between items-center">
@@ -13,7 +19,18 @@ export default function HRHeader() {
           </div>
   
           <div className="flex items-center gap-4">
-            <span className="material-symbols-outlined">notifications</span>
+            <button
+                onClick={() => navigate('/hr/notifications')}
+                className="relative p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            >
+                <span className="material-symbols-outlined">notifications</span>
+                {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                    </span>
+                )}
+            </button>
             <span className="material-symbols-outlined">help</span>
   
             <img

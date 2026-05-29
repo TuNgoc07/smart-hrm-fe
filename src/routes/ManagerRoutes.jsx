@@ -12,9 +12,12 @@ import TeamCalendarScreen from "../pages/manager/hrm/team/TeamCalendarScreen";
 import ManagerSettingScreen from "../pages/manager/hrm/setting/ManagerSettingScreen";
 import TeamMembersScreen from "../pages/manager/hrm/team/TeamMembersScreen";
 import { MemberProfileScreen } from "../pages/manager/hrm/team/MemberProfileScreen";
-import SupportHubScreen from "../common/SupportHubScreen";
+import WorkloadVisualizerScreen from "../pages/manager/hrm/team/WorkloadVisualizerScreen";
+import AIChatScreen from "../pages/shared/AIChatScreen";
 import CheckoutModal from "../common/CheckoutModal";
 import CheckinModal from "../common/CheckinModal";
+import FaceRegistrationScreen from "../common/FaceRegistrationScreen";
+
 
 export default function ManagerRoutes() {
     return (
@@ -24,17 +27,20 @@ export default function ManagerRoutes() {
                 <Route path="/manager/team" element={<TeamOverviewScreen />} />
                 <Route path="/manager/team-attendance" element={<TeamAttendanceScreen />} />
                 <Route path="/manager/requests" element={<RequestsScreen />} />
-                <Route path="/manager/request-details/:request_id" element={<RequestDetailScreen />} />
+                <Route path="/manager/requests/:request_id" element={<RequestDetailScreen />} />
                 <Route path="/manager/approval-history" element={<ApprovalHistoryScreen />} />
                 <Route path="/manager/insights" element={<AIInsightScreen />} />
                 <Route path="/manager/notifications" element={<NotificationScreen />} />
                 <Route path="/manager/team-calendar" element={<TeamCalendarScreen />} />
                 <Route path="/manager/settings" element={<ManagerSettingScreen />} />
                 <Route path="/manager/team-members" element={<TeamMembersScreen />} />
-                <Route path="/manager/profile" element={<MemberProfileScreen />} />
-                <Route path="/manager/ai-assistant" element={<SupportHubScreen />} />
+                <Route path="/manager/profile/:employeeId" element={<MemberProfileScreen />} />
+                <Route path="/manager/workload-distribution" element={<WorkloadVisualizerScreen />} />
+                <Route path="/manager/ai-assistant" element={<AIChatScreen />} />
                 <Route path="/manager/checkin" element={<CheckinModal />} />
                 <Route path="/manager/checkout" element={<CheckoutModal />} />
+                <Route path="/manager/face-registration" element={<FaceRegistrationScreen />} />
+                <Route path="/manager/profile" element={<ManagerSettingScreen />} />
 
             </Route>
         </Routes>

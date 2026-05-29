@@ -61,11 +61,23 @@ export default function ReviewExceptionModal({ data, onClose, onResolved }) {
 
   const isMissingCheckout   = data.exceptionType?.includes("MISSING_CHECKOUT");
 
+  const isLeaveOverride     = data.exceptionType === "LEAVE_OVERRIDE_CHECKIN";
+
   const needsTime      = action === "APPROVE_OT" || action === "MANUAL_CHECKOUT";
 
 
 
-  const ACTION_CONFIG = hasExplanation
+  const ACTION_CONFIG = isLeaveOverride
+
+    ? [
+
+        { key: "REVERT_TO_LEAVE", label: "Revert về Leave",      icon: "event_busy",    style: "border-amber-400 bg-amber-50 text-amber-700" },
+
+        { key: "KEEP_PRESENT",    label: "Giữ nguyên Present",   icon: "how_to_reg",    style: "border-emerald-400 bg-emerald-50 text-emerald-700" },
+
+      ]
+
+    : hasExplanation
 
     ? [
 
@@ -339,7 +351,9 @@ export default function ReviewExceptionModal({ data, onClose, onResolved }) {
 
           {hasExplanation && <ExplanationBlock data={data} />}
 
-          {!hasExplanation && !isAwaiting && !isReadOnly && <NoExplanationBlock />}
+          {isLeaveOverride && !isReadOnly && <LeaveOverrideBlock data={data} />}
+
+          {!isLeaveOverride && !hasExplanation && !isAwaiting && !isReadOnly && <NoExplanationBlock />}
 
 
 
@@ -442,6 +456,58 @@ export default function ReviewExceptionModal({ data, onClose, onResolved }) {
                 </div>
 
               )}
+
+            </div>
+
+          )}
+
+
+
+          {/* REVERT_TO_LEAVE notice */}
+
+          {action === "REVERT_TO_LEAVE" && (
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+
+              <span className="material-symbols-outlined text-amber-500 flex-shrink-0">event_busy</span>
+
+              <div>
+
+                <p className="text-sm font-bold text-amber-800">Attendance sẽ được revert về Leave</p>
+
+                <p className="text-xs text-amber-700 mt-1">
+
+                  Checkin/checkout sẽ bị xóa, status sẽ về &quot;leave&quot;. Leave balance vẫn được giữ nguyên.
+
+                </p>
+
+              </div>
+
+            </div>
+
+          )}
+
+
+
+          {/* KEEP_PRESENT notice */}
+
+          {action === "KEEP_PRESENT" && (
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex gap-3">
+
+              <span className="material-symbols-outlined text-emerald-500 flex-shrink-0">how_to_reg</span>
+
+              <div>
+
+                <p className="text-sm font-bold text-emerald-800">Attendance sẽ được giữ nguyên là Present</p>
+
+                <p className="text-xs text-emerald-700 mt-1">
+
+                  Nhân viên sẽ được tính là có mặt trong ngày này. Leave balance đã bị trừ sẽ không được hoàn lại tự động.
+
+                </p>
+
+              </div>
 
             </div>
 
@@ -773,6 +839,60 @@ function ResolvedBlock({ data }) {
 
 /* ===== UI Helpers ===== */
 
+function LeaveOverrideBlock({ data }) {
+
+  return (
+
+    <div className="rounded-xl border border-amber-200 bg-amber-50/40 overflow-hidden">
+
+      <div className="px-4 py-3 bg-amber-100/60 border-b border-amber-200 flex items-center gap-2">
+
+        <span className="material-symbols-outlined text-amber-600 text-base">event_busy</span>
+
+        <p className="text-sm font-bold text-amber-800">Nhân viên có approved leave nhưng vẫn chấm công</p>
+
+      </div>
+
+      <div className="p-4 space-y-2">
+
+        <p className="text-xs text-slate-600 leading-relaxed">
+
+          Nhân viên đã có leave request được approved cho ngày này, nhưng vẫn thực hiện check-in.
+
+          HR cần quyết định giữ trạng thái nào cho attendance record:
+
+        </p>
+
+        <div className="grid grid-cols-2 gap-3 mt-2">
+
+          <div className="bg-white border rounded-lg p-3">
+
+            <p className="text-xs font-bold text-amber-700 flex items-center gap-1"><span className="material-symbols-outlined text-sm">event_busy</span> Revert về Leave</p>
+
+            <p className="text-xs text-slate-500 mt-1">Xóa checkin, giữ leave balance đã trừ.</p>
+
+          </div>
+
+          <div className="bg-white border rounded-lg p-3">
+
+            <p className="text-xs font-bold text-emerald-700 flex items-center gap-1"><span className="material-symbols-outlined text-sm">how_to_reg</span> Giữ nguyên Present</p>
+
+            <p className="text-xs text-slate-500 mt-1">Tính là có mặt. Leave balance vẫn bị trừ.</p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+}
+
+
+
 function TypeBadge({ type }) {
 
   const map = {
@@ -786,6 +906,8 @@ function TypeBadge({ type }) {
     "Out of Location":              "bg-purple-100 text-purple-700",
 
     "MISSING_CHECKOUT_POSSIBLE_OT": "bg-indigo-100 text-indigo-700",
+
+    "LEAVE_OVERRIDE_CHECKIN":       "bg-amber-100 text-amber-700",
 
   };
 

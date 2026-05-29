@@ -9,8 +9,10 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
     policyCode: "",
     leaveType: "",
     isPaid: 1,
+    deductBalance: 1,
     isActive: 1,
-    daysPerYear: ""
+    daysPerYear: "",
+    maxCarryOverDays: "" // null = không giới hạn carry over
   });
 
   const [loading, setLoading] = useState(false);
@@ -24,8 +26,10 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
         policyCode: policyData.policyCode || "",
         leaveType: policyData.leaveType || "",
         isPaid: policyData.isPaid ?? 1,
+        deductBalance: policyData.deductBalance ?? 1,
         isActive: policyData.isActive ?? 1,
-        daysPerYear: policyData.daysPerYear || ""
+        daysPerYear: policyData.daysPerYear || "",
+        maxCarryOverDays: policyData.maxCarryOverDays != null ? String(policyData.maxCarryOverDays) : ""
       });
     } else {
       setFormData({
@@ -34,8 +38,10 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
         policyCode: "",
         leaveType: "",
         isPaid: 1,
+        deductBalance: 1,
         isActive: 1,
-        daysPerYear: ""
+        daysPerYear: "",
+        maxCarryOverDays: ""
       });
     }
   }, [policyData]);
@@ -65,8 +71,11 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
         policyCode: formData.policyCode,
         leaveType: formData.leaveType,
         isPaid: parseInt(formData.isPaid),
+        deductBalance: parseInt(formData.deductBalance),
         isActive: parseInt(formData.isActive),
-        daysPerYear: parseInt(formData.daysPerYear)
+        daysPerYear: parseInt(formData.daysPerYear),
+        /** maxCarryOverDays: null nếu để trống → không giới hạn carry over */
+        maxCarryOverDays: formData.maxCarryOverDays ? parseInt(formData.maxCarryOverDays) : null
       };
 
       const res = await fetch(`${API_BASE_URL}/api/hradmin/leave-policies`, {
@@ -191,10 +200,31 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
             />
           </div>
 
+          {/* Max Carry-Over Days */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+              Max Carry-Over Days
+            </label>
+            <input
+              type="number"
+              name="maxCarryOverDays"
+              value={formData.maxCarryOverDays}
+              onChange={handleChange}
+              placeholder="Leave empty for unlimited"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              min="0"
+              step="1"
+            />
+            <div className="mt-1 text-xs text-slate-500">
+              {/* Chú thích: null = không giới hạn, HR có thể để trống */}
+              Maximum days that can be carried over to next year. Leave empty for unlimited.
+            </div>
+          </div>
+
           {/* Is Paid */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
-              Is Paid *
+              Salary Payment *
             </label>
             <select
               name="isPaid"
@@ -203,9 +233,32 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               required
             >
-              <option value={1}>Yes - Paid Leave</option>
-              <option value={0}>No - Unpaid Leave</option>
+              <option value={1}>Paid by Company</option>
+              <option value={0}>Unpaid / Paid by BHXH</option>
             </select>
+            <div className="mt-1 text-xs text-slate-500">
+              Whether the employee receives salary during this leave (from the company).
+            </div>
+          </div>
+
+          {/* Deduct Balance */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+              Deduct Leave Balance *
+            </label>
+            <select
+              name="deductBalance"
+              value={formData.deductBalance}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              required
+            >
+              <option value={1}>Yes — deduct from leave balance</option>
+              <option value={0}>No — does not affect leave balance</option>
+            </select>
+            <div className="mt-1 text-xs text-slate-500">
+              Whether submitting this leave deducts the employee’s leave balance. Maternity &amp; Unpaid Leave = No.
+            </div>
           </div>
 
           {/* Is Active */}
@@ -226,8 +279,15 @@ export default function LeavePolicyConfigModal({ isOpen, onClose, policyData, on
           </div>
 
           {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
-            <strong>Note:</strong> Policy code is used as a unique identifier. Once created, it cannot be changed.
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 space-y-1">
+            <div><strong>Policy Code:</strong> Unique identifier — cannot be changed after creation.</div>
+            <div><strong>Salary Payment vs Deduct Balance:</strong> These are independent settings.</div>
+            <div className="pl-2 text-slate-600 space-y-0.5">
+              <div>• <strong>Annual Leave:</strong> Paid by Company + Deduct Balance</div>
+              <div>• <strong>Sick Leave (BHXH):</strong> Paid by BHXH (not company) + Deduct Balance</div>
+              <div>• <strong>Maternity / Unpaid:</strong> No salary from company + No balance deduction</div>
+            </div>
+            <div><strong>Carry-Over:</strong> Leave empty for unlimited carry-over to next year.</div>
           </div>
 
           {/* Actions */}

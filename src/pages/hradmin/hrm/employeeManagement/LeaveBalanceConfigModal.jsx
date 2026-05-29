@@ -13,7 +13,7 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
     adjustedDays: "0",
     usedDays: "0",       // read-only
     pendingDays: "0",    // read-only
-    remainingDays: "0",   // computed
+    remainingDays: "0",   // computed column từ DB
     autoCalculate: true  // flag to show auto-calculation UI
   });
 
@@ -21,6 +21,41 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
   const [error, setError] = useState("");
   const [leavePolicies, setLeavePolicies] = useState([]);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
+  /** Preview carry-over: mảng {policyId, policyName, remainingDays, carryOverDays, maxCarryOverDays} */
+  const [carryOverPreview, setCarryOverPreview] = useState([]);
+  const [loadingCarryOver, setLoadingCarryOver] = useState(false);
+
+  /**
+   * Fetch carry-over preview khi năm thay đổi ở create mode.
+   * Gọi endpoint GET /api/hradmin/leave-balances/carry-over/employee/{id}?fromYear=(year-1)
+   * để lấy số ngày dư năm trước sẽ được chuyển sang.
+   */
+  useEffect(() => {
+    const loadCarryOverPreview = async () => {
+      // Chỉ fetch preview ở create mode và khi có employeeId
+      if (formData.balanceId || !formData.employeeId || !formData.year) return;
+      setLoadingCarryOver(true);
+      try {
+        const fromYear = parseInt(formData.year) - 1; // năm trước để xem số dư
+        const res = await fetch(
+          `${API_BASE_URL}/api/hradmin/leave-balances/carry-over/employee/${formData.employeeId}?fromYear=${fromYear}`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+        const data = await res.json();
+        // Lưu preview list để hiển thị số ngày dự kiến carry over theo từng policy
+        if (data.status === "success" && Array.isArray(data.data)) {
+          setCarryOverPreview(data.data);
+        } else {
+          setCarryOverPreview([]);
+        }
+      } catch (err) {
+        setCarryOverPreview([]); // lỗi mạng → ẩn preview, không block form
+      } finally {
+        setLoadingCarryOver(false);
+      }
+    };
+    loadCarryOverPreview();
+  }, [formData.year, formData.employeeId, formData.balanceId]);
 
   // Load leave policies khi modal mở
   useEffect(() => {
@@ -304,7 +339,11 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
             )}
             {selectedPolicy && !formData.autoCalculate && !formData.entitledDays && (
               <div className="mt-1 text-xs text-blue-600">
-                Default from policy: {selectedPolicy.daysPerYear} days
+                Default from policy: {selectedPolicy.daysPerYear} days/year
+                {/* Hiển thị giới hạn carry-over nếu policy có cấu hình */}
+                {selectedPolicy.maxCarryOverDays != null && (
+                  <span className="ml-2 text-amber-600">• Max carry-over: {selectedPolicy.maxCarryOverDays} days</span>
+                )}
               </div>
             )}
           </div>
@@ -325,8 +364,40 @@ export default function LeaveBalanceConfigModal({ isOpen, onClose, balanceData, 
               step="0.5"
             />
             <div className="mt-1 text-xs text-slate-500">
-              Days carried over from previous year
+              {/* Nếu để 0 và create mode → backend sẽ tự động lấy số dư năm trước */}
+              Để 0 để hệ thống tự động lấy số ngày dư từ năm trước
             </div>
+
+            {/* Carry-Over Preview: hiển thị số ngày dự kiến sẽ được chuyển từ năm trước */}
+            {!formData.balanceId && carryOverPreview.length > 0 && (
+              <div className="mt-3 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-outlined text-teal-600 text-[18px]">autorenew</span>
+                  {/* Tiêu đề preview: cho biết đây là số ngày sẽ được chuyển tự động */}
+                  <span className="text-xs font-bold text-teal-800">
+                    Auto Carry-Over từ năm {parseInt(formData.year) - 1}
+                    {loadingCarryOver && <span className="ml-1 text-teal-500">(loading...)</span>}
+                  </span>
+                </div>
+                {carryOverPreview.map((item) => (
+                  <div key={item.policyId} className="flex justify-between text-xs text-teal-700 py-1 border-b border-teal-100 last:border-0">
+                    <span>{item.policyName}</span>
+                    <span className="font-bold">
+                      {/* Số ngày thực tế sẽ carry over (đã áp dụng giới hạn) */}
+                      {item.carryOverDays} ngày
+                      {/* Hiển thị giới hạn policy nếu số dư bị cắt */}
+                      {item.maxCarryOverDays != null && parseFloat(item.remainingDays) > parseFloat(item.maxCarryOverDays) && (
+                        <span className="ml-1 text-amber-600">(capped {item.maxCarryOverDays})</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+                <div className="mt-1 text-xs text-teal-600">
+                  {/* Chú thích: nhắc HR Admin về cơ chế tự động */}
+                  Sẽ tự động điền nếu để Carried Over Days = 0
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Adjusted Days */}

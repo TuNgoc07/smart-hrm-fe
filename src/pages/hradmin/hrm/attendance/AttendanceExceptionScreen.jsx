@@ -322,11 +322,12 @@ function StatusBadge({ status }) {
 
 function ExceptionTypeBadge({ type }) {
   const map = {
-    EARLY_DEPARTURE:    "bg-orange-100 text-orange-700",
-    OVERTIME:           "bg-indigo-100 text-indigo-700",
-    INSUFFICIENT_HOURS: "bg-rose-100 text-rose-700",
-    LATE_ARRIVAL:       "bg-amber-100 text-amber-700",
-    MISSING_CHECKOUT:   "bg-red-100 text-red-700",
+    EARLY_DEPARTURE:          "bg-orange-100 text-orange-700",
+    OVERTIME:                 "bg-indigo-100 text-indigo-700",
+    INSUFFICIENT_HOURS:       "bg-rose-100 text-rose-700",
+    LATE_ARRIVAL:             "bg-amber-100 text-amber-700",
+    MISSING_CHECKOUT:         "bg-red-100 text-red-700",
+    LEAVE_OVERRIDE_CHECKIN:   "bg-amber-100 text-amber-800",
   };
   return (
     <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${map[type] || "bg-slate-100 text-slate-600"}`}>

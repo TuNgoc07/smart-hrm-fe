@@ -405,8 +405,17 @@ export default function NewRequestScreen() {
         return;
       }
 
-      const res  = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-      const data = await res.json();
+      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        // Nếu body không phải JSON, dùng status text
+        alert('❌ Lỗi server: ' + (res.statusText || 'Unknown error'));
+        setSubmitting(false);
+        return;
+      }
+
       if (data.status === 'success') {
         alert('✅ Request submitted successfully!');
         handleCancel();

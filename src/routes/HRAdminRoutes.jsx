@@ -25,9 +25,13 @@ import AttendancePeriodConfigScreen from "../pages/hradmin/hrm/payhub/Attendance
 import HolidayCalendarScreen from "../pages/hradmin/hrm/payhub/HolidayCalendarScreen";
 import AIInsightsDashboard from "../pages/hradmin/hrm/intelligence/insights/AIInsightScreen";
 import AutomationRulesScreen from "../pages/hradmin/hrm/intelligence/automation/AutomationRuleScreen";
-import SupportHubScreen from "../common/SupportHubScreen";
+import AIChatScreen from "../pages/shared/AIChatScreen";
 import ContractTemplateListScreen from "../pages/hradmin/hrm/contract/ContractTemplateListScreen";
 import TeamListScreen from "../pages/hradmin/hrm/department/TeamListScreen";
+import LeavePolicyManagementScreen from "../pages/hradmin/hrm/employeeManagement/LeavePolicyManagementScreen";
+import ChecklistTemplateManagementScreen from "../pages/hradmin/hrm/checklist/ChecklistTemplateManagementScreen";
+import ChecklistAssignmentScreen from "../pages/hradmin/hrm/checklist/ChecklistAssignmentScreen";
+import NotificationScreen from "../pages/hradmin/hrm/notification/NotificationScreen";
 
 export default function HRAdminRoutes(){
     return (
@@ -41,7 +45,11 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/department-list" element={<DepartmentListScreen />} />
                 <Route path="/hr/position-list" element={<PositionListScreen />} />
                 <Route path="/hr/jobs" element={<JobListScreen />} />
-                <Route path="/hr/teams" element={<TeamListScreen />} /> 
+                <Route path="/hr/teams" element={<TeamListScreen />} />
+                <Route path="/hr/leave-policies" element={<LeavePolicyManagementScreen />} />
+                <Route path="/hr/checklist-templates" element={<ChecklistTemplateManagementScreen />} />
+                <Route path="/hr/checklist-assignments" element={<ChecklistAssignmentScreen />} />
+                <Route path="/hr/notifications" element={<NotificationScreen />} />
                 <Route path="/hr/contract-list" element={<ContractListScreen />} />
                 <Route path="/hr/contract-templates" element={<ContractTemplateListScreen />} />
                 <Route path="/hr/org-chart" element={<OrgChartScreen/>} />
@@ -61,7 +69,7 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/attendance-period-config" element={<AttendancePeriodConfigScreen />} />
                 <Route path="/hr/holiday-calendar" element={<HolidayCalendarScreen />} />
                 <Route path="/hr/ai-insights" element={<AIInsightsDashboard />} />
-                <Route path="/hr/ai-assistant" element={<SupportHubScreen />} />
+                <Route path="/hr/ai-assistant" element={<AIChatScreen />} />
                 <Route path="/hr/automation-rules" element={<AutomationRulesScreen />} />
             </Route>
         </Routes>

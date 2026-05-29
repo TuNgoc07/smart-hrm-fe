@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '../../../../context/NotificationContext';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useHrAdminNotificationPolling from "../../../../hooks/useHrAdminNotificationPolling";
 
-const FILTER_TABS = ['All', 'Requests', 'Attendance', 'Payroll', 'Documents', 'System'];
+const FILTER_TABS = ['All', 'Requests', 'Attendance', 'Checklist', 'System'];
 
 const FILTER_TYPE_MAP = {
     'Requests': 'request',
     'Attendance': 'attendance',
-    'Payroll': 'payroll',
-    'Documents': 'checklist',
+    'Checklist': 'checklist',
     'System': 'system',
 };
 
@@ -25,7 +24,6 @@ const getIconConfig = (type, title = '') => {
         if (t.includes('rejected')) return { icon: 'cancel', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' };
         return { icon: 'event_available', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' };
     }
-    if (type === 'payroll') return { icon: 'payments', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' };
     if (type === 'checklist') return { icon: 'checklist', bg: 'bg-primary/10 dark:bg-primary/20', text: 'text-primary' };
     if (type === 'system') return { icon: 'info', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400' };
     return { icon: 'notifications', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400' };
@@ -50,8 +48,8 @@ function PageHeading({ onMarkAllRead, unreadTotal }) {
     return (
         <div className="flex flex-wrap justify-between items-end gap-4">
             <div className="flex flex-col gap-1">
-                <h1 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Notifications / Inbox</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-base">Updates about your HR activities</p>
+                <h1 className="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Notifications</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-base">Updates about HR activities</p>
             </div>
             <div className="flex items-center gap-3">
                 {unreadTotal > 0 && (
@@ -208,7 +206,7 @@ function EmptyState({ filter }) {
 export default function NotificationScreen() {
     const navigate = useNavigate();
     const [activeFilter, setActiveFilter] = useState('All');
-    const { notifications, loading, error, handleMarkAsRead, handleMarkAllAsRead, unreadCounts, refresh } = useNotifications();
+    const { notifications, loading, error, handleMarkAsRead, handleMarkAllAsRead, unreadCounts, refresh } = useHrAdminNotificationPolling("all");
 
     // Update filter to trigger API refresh
     const handleFilterChange = (filter) => {
@@ -222,8 +220,8 @@ export default function NotificationScreen() {
         : notifications.filter(n => n.type === FILTER_TYPE_MAP[activeFilter]);
 
     return (
-        <main className="flex-1 flex flex-col ">
-            <div className=" w-full flex flex-col gap-6">
+        <main className="flex-1 flex flex-col">
+            <div className="w-full flex flex-col gap-6">
                 <PageHeading onMarkAllRead={handleMarkAllAsRead} unreadTotal={unreadCounts.total} />
 
                 <FilterBar activeFilter={activeFilter} onFilterChange={handleFilterChange} unreadCounts={unreadCounts} />

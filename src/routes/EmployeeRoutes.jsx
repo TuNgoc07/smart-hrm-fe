@@ -8,9 +8,10 @@ import MyRequestScreen from "../pages/employee/hrm/materials/MyRequestScreen";
 import NewRequestScreen from "../pages/employee/hrm/materials/NewRequestScreen";
 import RequestDetailScreen from "../pages/employee/hrm/materials/RequestDetailScreen";
 import MyPayslipScreen from "../pages/employee/hrm/materials/MyPayslipScreen";
+import ChecklistDetailScreen from "../pages/employee/hrm/materials/ChecklistDetailScreen";
 import NotificationScreen from "../pages/employee/hrm/notification/NotificationScreen";
 import FaceRegistrationScreen from "../common/FaceRegistrationScreen";
-import SupportHubScreen from "../common/SupportHubScreen";
+import AIChatScreen from "../pages/shared/AIChatScreen";
 
 export function EmployeeRoutes() {
     return (
@@ -22,10 +23,11 @@ export function EmployeeRoutes() {
                 <Route path="/employee/my-attendance" element={<MyAttendanceScreen />} />
                 <Route path="/employee/my-requests" element={<MyRequestScreen />} />
                 <Route path="/employee/new-request" element={<NewRequestScreen />} />
-                <Route path="/employee/request-details" element={<RequestDetailScreen />} />
+                <Route path="/employee/request-details/:requestId" element={<RequestDetailScreen />} />
                 <Route path="/employee/my-payslip" element={<MyPayslipScreen />} />
+                <Route path="/employee/my-checklists/:assignmentId" element={<ChecklistDetailScreen />} />
                 <Route path="/employee/notifications" element={<NotificationScreen />} />
-                <Route path="/employee/ai-assistant" element={<SupportHubScreen />} />
+                <Route path="/employee/ai-assistant" element={<AIChatScreen />} />
                 <Route path="/face-registration" element={<FaceRegistrationScreen />} />
 
             </Route>

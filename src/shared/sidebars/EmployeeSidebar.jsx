@@ -1,6 +1,9 @@
 import { NavLink } from "react-router-dom";
+import { useNotifications } from "../../context/NotificationContext";
 
 export default function EmployeeSidebar() {
+    const { unreadCount } = useNotifications();
+
     return (
         <aside className="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-[#16222e] flex flex-col justify-between py-6 hidden md:block">
             <div className="fixed flex flex-col gap-8">
@@ -39,7 +42,7 @@ export default function EmployeeSidebar() {
                         <span className="material-symbols-outlined">folder_open</span>
                         <span className="text-sm font-medium">My Documents</span>
                     </NavLink>
-                    <NavLink to="/employee/chatbot" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <NavLink to="/employee/ai-assistant" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <span className="material-symbols-outlined">smart_toy</span>
                         <span className="text-sm font-medium">HR Chatbot</span>
                     </NavLink>
@@ -52,8 +55,20 @@ export default function EmployeeSidebar() {
             {/* <!-- Bottom Menu --> */}
             <div className="fixed bottom-0 flex flex-col gap-1 px-3">
                 <NavLink to="/employee/notifications" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                    <span className="material-symbols-outlined">notifications</span>
+                    <span className="relative">
+                        <span className="material-symbols-outlined">notifications</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                        )}
+                    </span>
                     <span className="text-sm font-medium">Notifications</span>
+                    {unreadCount > 0 && (
+                        <span className="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
                 </NavLink>
                 <NavLink to="/employee/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                     <span className="material-symbols-outlined">settings</span>

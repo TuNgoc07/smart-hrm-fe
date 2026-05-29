@@ -1,31 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUnreadCount } from '../../services/notificationService';
-
-const POLL_INTERVAL = 30000;
+import { useNotifications } from '../../context/NotificationContext';
 
 export default function EmployeeHeader() {
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const { unreadCount } = useNotifications();
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
-
-    useEffect(() => {
-        const loadCount = async () => {
-            try {
-                const data = await fetchUnreadCount();
-                setUnreadCount(data.count ?? 0);
-            } catch {
-                // silently ignore — badge simply won't show
-            }
-        };
-        loadCount();
-        const interval = setInterval(loadCount, POLL_INTERVAL);
-        return () => clearInterval(interval);
-    }, []);
 
     return (
         <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 dark:bg-[#16222e]/80 backdrop-blur-md border-b border-[#e7edf3] dark:border-slate-800">

@@ -242,7 +242,7 @@ export default function MyRequestScreen() {
                         <MoreFiltersButton />
                     </FilterBar>
                 </div>
-                <RequestTable rows={rows} loading={loading} onClick={() => navigate("/employee/request-details")} />
+                <RequestTable rows={rows} loading={loading} onClick={(r) => navigate(`/employee/request-details/${r.requestId}`)} />
             </div>
         </main>
     );

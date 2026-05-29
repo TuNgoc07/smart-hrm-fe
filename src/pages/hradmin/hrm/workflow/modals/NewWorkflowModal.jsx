@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
-const REQUEST_TYPES = ["Leave Request", "Salary Increase", "Business Trip", "Expense Report", "Overtime Request"];
-const REQUEST_TYPE_IDS = ["leave_request", "salary_increase", "business_trip", "expense_report", "ot"];
+const REQUEST_TYPES = ["Leave Request", "Salary Increase", "Business Trip", "Expense Report", "Overtime Request", "Adjustment Request"];
+const REQUEST_TYPE_IDS = ["leave_request", "salary_increase", "business_trip", "expense_report", "ot", "adjustment_request"];
 
 export default function NewWorkflowModal({ open, onClose, workflows }) {
   const [workflowName, setWorkflowName] = useState("");

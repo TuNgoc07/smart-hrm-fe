@@ -24,7 +24,7 @@ const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("toke
 /* ─── Main Screen ──────────────────────────────────────────────── */
 export default function TeamAttendanceScreen() {
   const navigate = useNavigate();
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString('en-CA');
 
   /* ── View mode toggle: "daily" (existing) | "period" (new) ── */
   const [viewMode, setViewMode] = useState("daily");

@@ -29,6 +29,12 @@ export default function HRSidebar() {
           Dashboard
         </NavLink>
 
+        {/* Notifications */}
+        <NavLink to="/hr/notifications" className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg font-semibold ${isActive ? "bg-primary/10 text-primary" : "hover:bg-slate-100"}`}>
+          <span className="material-symbols-outlined text-lg">notifications</span>
+          Notifications
+        </NavLink>
+
         {/* Employee Management */}
         <div>
           <button
@@ -67,6 +73,18 @@ export default function HRSidebar() {
             <NavLink to="/hr/teams" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
               <span className="material-symbols-outlined text-lg mr-2">work</span>
               Team
+            </NavLink>
+            <NavLink to="/hr/leave-policies" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">policy</span>
+              Leave Policies
+            </NavLink>
+            <NavLink to="/hr/checklist-templates" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">checklist</span>
+              Checklist Templates
+            </NavLink>
+            <NavLink to="/hr/checklist-assignments" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">assignment</span>
+              Checklist Assignments
             </NavLink>
           </div>
         </div>

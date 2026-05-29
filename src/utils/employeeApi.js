@@ -103,6 +103,32 @@ export async function fetchMyRequests(type, status) {
     return res.json();
 }
 
+/**
+ * Lấy chi tiết 1 request theo requestId.
+ * Backend validate: request phải thuộc về employee đang đăng nhập (JWT).
+ * Response: { status, data: { requestId, requestType, requestDetail, timeline, activities, leaveBalance, canCancel, ... } }
+ */
+export async function fetchMyRequestDetail(requestId) {
+    const res = await fetch(`${BASE_URL}/api/employee/my-requests/${requestId}`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Request detail fetch failed: ${res.status}`);
+    return res.json();
+}
+
+/**
+ * Cancel 1 request đang ở trạng thái "pending".
+ * Backend validate: ownership + status = "pending" trước khi cancel.
+ */
+export async function cancelMyRequest(requestId) {
+    const res = await fetch(`${BASE_URL}/api/employee/my-requests/${requestId}/cancel`, {
+        method: "POST",
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Cancel request failed: ${res.status}`);
+    return res.json();
+}
+
 // ── Payslips ───────────────────────────────────────────────────────────────
 export async function fetchMyPayslips() {
     const res = await fetch(`${BASE_URL}/api/employee/my-payslips`, {
@@ -118,6 +144,27 @@ export async function fetchMyPayslipDetail(payslipId) {
     });
     if (!res.ok) throw new Error(`Payslip detail fetch failed: ${res.status}`);
     return res.json();
+}
+
+/**
+ * Download payslip as PDF with QR code verification.
+ * Features: QR code, watermark, multi-language support.
+ */
+export async function downloadPayslipPdf(payslipId) {
+    const res = await fetch(`${BASE_URL}/api/employee/my-payslips/${payslipId}/download`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Payslip download failed: ${res.status}`);
+    
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payslip_${payslipId}_${Date.now()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 }
 
 // ── Leave Balances ─────────────────────────────────────────────────────────
@@ -154,6 +201,45 @@ export async function markAllNotificationsRead() {
         headers: getHeaders(),
     });
     if (!res.ok) throw new Error(`Mark all read failed: ${res.status}`);
+    return res.json();
+}
+
+// ── Documents ──────────────────────────────────────────────────────────────
+export async function fetchMyDocuments() {
+    const res = await fetch(`${BASE_URL}/api/employee/my-documents`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Documents fetch failed: ${res.status}`);
+    const json = await res.json();
+    return json.status === "success" ? json.data : { contracts: [], uploadedFiles: [] };
+}
+
+// ── Checklists ─────────────────────────────────────────────────────────────
+export async function fetchMyChecklists() {
+    const res = await fetch(`${BASE_URL}/api/employee/my-checklists`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Checklists fetch failed: ${res.status}`);
+    const json = await res.json();
+    return json.status === "success" ? json.data : [];
+}
+
+export async function fetchMyChecklistDetail(assignmentId) {
+    const res = await fetch(`${BASE_URL}/api/employee/my-checklists/${assignmentId}`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Checklist detail fetch failed: ${res.status}`);
+    const json = await res.json();
+    return json.status === "success" ? json.data : null;
+}
+
+export async function submitChecklistItem(assignmentId, itemId, fileUrl, fileName) {
+    const res = await fetch(`${BASE_URL}/api/employee/my-checklists/${assignmentId}/items/${itemId}/submit`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ fileUrl, fileName }),
+    });
+    if (!res.ok) throw new Error(`Submit failed: ${res.status}`);
     return res.json();
 }
 
@@ -198,4 +284,23 @@ export function getAttendanceStatusConfig(status) {
     if (s === "missing") return { label: "Missing", dot: "bg-red-500", badge: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" };
     if (s === "absent") return { label: "Absent", dot: "bg-slate-400", badge: "bg-slate-100 text-slate-600" };
     return { label: status || "–", dot: "bg-slate-400", badge: "bg-slate-100 text-slate-600" };
+}
+
+// ── AI Assistant ───────────────────────────────────────────────────────────────
+export async function sendAiChatMessage(question) {
+    const res = await fetch(`${BASE_URL}/api/ai/chat`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ question }),
+    });
+    if (!res.ok) throw new Error(`AI chat failed: ${res.status}`);
+    return res.json();
+}
+
+export async function fetchAiChatHistory() {
+    const res = await fetch(`${BASE_URL}/api/ai/chat/history`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`AI chat history fetch failed: ${res.status}`);
+    return res.json();
 }

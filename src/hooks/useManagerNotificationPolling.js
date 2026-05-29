@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchNotifications, markAsRead, markAllAsRead, fetchUnreadCountByType } from '../services/notificationService';
+import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead, fetchUnreadCountByType } from '../utils/managerApi';
 
 const POLL_INTERVAL = 30000;
 
@@ -24,7 +24,7 @@ const playNotificationSound = () => {
     }
 };
 
-export default function useNotificationPolling(typeFilter = "all") {
+export default function useManagerNotificationPolling(typeFilter = "all") {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -81,7 +81,7 @@ export default function useNotificationPolling(typeFilter = "all") {
 
     const handleMarkAsRead = useCallback(async (id) => {
         try {
-            await markAsRead(id);
+            await markNotificationAsRead(id);
             setNotifications(prev =>
                 prev.map(n => n.id === id ? { ...n, read: true } : n)
             );
@@ -96,7 +96,7 @@ export default function useNotificationPolling(typeFilter = "all") {
 
     const handleMarkAllAsRead = useCallback(async () => {
         try {
-            await markAllAsRead();
+            await markAllNotificationsAsRead();
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             prevUnreadCountRef.current = 0;
             fetchAndUpdate(); // Refresh counts

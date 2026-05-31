@@ -4,8 +4,26 @@ import { useState } from "react";
 export default function ManagerSidebar() {
   const navigate = useNavigate();
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   return (
-    <aside className="w-64 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col h-screen sticky top-0">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-background-dark rounded-lg shadow-lg border border-[#e7edf3] dark:border-slate-800"
+      >
+        <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">menu</span>
+      </button>
+
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col h-screen transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
 
       {/* TOP */}
       <div className="p-6">
@@ -92,6 +110,7 @@ export default function ManagerSidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }
 

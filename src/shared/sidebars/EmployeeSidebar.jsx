@@ -1,11 +1,30 @@
 import { NavLink } from "react-router-dom";
 import { useNotifications } from "../../context/NotificationContext";
+import { useState } from "react";
 
 export default function EmployeeSidebar() {
     const { unreadCount } = useNotifications();
+    const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <aside className="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-[#16222e] flex flex-col justify-between py-6 hidden md:block">
+        <>
+            {/* Mobile Menu Button */}
+            <button
+                onClick={() => setIsOpen(true)}
+                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-[#16222e] rounded-lg shadow-lg border border-[#e7edf3] dark:border-slate-800"
+            >
+                <span className="material-symbols-outlined text-[#4c739a]">menu</span>
+            </button>
+
+            {/* Overlay for mobile */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+
+            <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-[#16222e] flex flex-col justify-between py-6 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
             <div className="fixed flex flex-col gap-8">
                 {/* <!-- Logo/Brand --> */}
                 <div className="px-6 flex items-center gap-3">
@@ -76,5 +95,6 @@ export default function EmployeeSidebar() {
                 </NavLink>
             </div>
         </aside>
+        </>
     );
 }

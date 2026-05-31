@@ -5,11 +5,29 @@ export default function HRSidebar() {
   const [openEmployee, setOpenEmployee] = useState(false);
   const [openPayroll, setOpenPayroll] = useState(false);
   const [openIntelligence, setIntelligence] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const navigate = useNavigate();
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-72 bg-white border-r flex flex-col overflow-y-auto">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-slate-200"
+      >
+        <span className="material-symbols-outlined text-slate-600">menu</span>
+      </button>
+
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-72 bg-white border-r flex flex-col overflow-y-auto transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       {/* Logo */}
       <div className="p-6 font-extrabold text-primary text-xl">
         SMART HR
@@ -211,5 +229,6 @@ export default function HRSidebar() {
         Logout
       </button>
     </aside>
+    </>
   );
 }

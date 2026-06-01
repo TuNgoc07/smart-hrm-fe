@@ -80,7 +80,7 @@ export default function NotificationScreen() {
     return (
         <main className="flex-1 flex flex-col min-w-0">
             {/* <!-- Workspace Content --> */}
-            <div className=" mx-auto w-full grow">
+            <div className="px-4 sm:px-6 md:px-8 lg:px-12 mx-auto w-full grow max-w-7xl">
                 {/* <!-- Page Heading --> */}
                 <PageHeading onMarkAllAsRead={handleMarkAllAsRead} unreadTotal={unreadCounts.total} />
 
@@ -124,22 +124,22 @@ function Footer() {
 
 function PageHeading({ onMarkAllAsRead, unreadTotal }) {
     return (
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-            <div>
-                <h2 className="text-4xl font-black tracking-tight mb-2">Notifications / Inbox</h2>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Things that need your attention</p>
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-8">
+            <div className="min-w-0 flex-1">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-2 truncate">Notifications / Inbox</h2>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">Things that need your attention</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 {unreadTotal > 0 && (
                     <button
                         onClick={onMarkAllAsRead}
-                        className="text-primary hover:text-primary/80 text-sm font-bold px-4 py-2 transition-colors"
+                        className="text-primary hover:text-primary/80 text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 transition-colors"
                     >
                         Mark all as read
                     </button>
                 )}
-                <button className="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                    <span className="material-symbols-outlined">settings</span>
+                <button className="size-9 sm:size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    <span className="material-symbols-outlined text-lg sm:text-xl">settings</span>
                 </button>
             </div>
         </div>
@@ -225,40 +225,40 @@ function NotificationSection({
                 return (
                     <div
                         key={notification.id}
-                        className={`group relative bg-white dark:bg-slate-900 border-l-4 ${colors.border} p-5 rounded-r-xl rounded-l-md shadow-sm hover:shadow-md transition-all flex items-start gap-4 ring-1 ring-slate-200 dark:ring-slate-800 ${
+                        className={`group relative bg-white dark:bg-slate-900 border-l-4 ${colors.border} p-3 sm:p-4 md:p-5 rounded-r-xl rounded-l-md shadow-sm hover:shadow-md transition-all flex items-start gap-3 sm:gap-4 ring-1 ring-slate-200 dark:ring-slate-800 ${
                             isUnread ? "" : "opacity-80"
                         }`}
                     >
-                        <div className="flex-shrink-0 mt-1 relative">
-                            <div className={`size-10 rounded-full ${colors.iconBg} ${colors.iconText} flex items-center justify-center`}>
+                        <div className="flex-shrink-0 mt-0.5 sm:mt-1 relative">
+                            <div className={`size-8 sm:size-10 rounded-full ${colors.iconBg} ${colors.iconText} flex items-center justify-center`}>
                                 <span
-                                    className="material-symbols-outlined"
+                                    className="material-symbols-outlined text-lg sm:text-xl"
                                     style={{ fontVariationSettings: isUnread ? "'FILL' 1" : "'FILL' 0" }}
                                 >
                                     {icon}
                                 </span>
                             </div>
                             {isUnread && (
-                                <div className="absolute -top-1 -right-1 size-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>
+                                <div className="absolute -top-1 -right-1 size-2.5 sm:size-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-1">
-                                <h3 className={`font-black truncate ${isUnread ? "text-[#0d141b] dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-2 mb-1">
+                                <h3 className={`font-semibold sm:font-black text-sm sm:text-base truncate ${isUnread ? "text-[#0d141b] dark:text-white" : "text-slate-500 dark:text-slate-400"}`}>
                                     {notification.title}
                                 </h3>
-                                <span className="text-xs font-bold text-slate-400 whitespace-nowrap ml-4">
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 whitespace-nowrap">
                                     {formatTimeAgo(notification.createdAt)}
                                 </span>
                             </div>
-                            <p className={`text-sm mb-3 ${isUnread ? "text-slate-600 dark:text-slate-400" : "text-slate-400 dark:text-slate-500"}`}>
+                            <p className={`text-xs sm:text-sm mb-2 sm:mb-3 ${isUnread ? "text-slate-600 dark:text-slate-400" : "text-slate-400 dark:text-slate-500"}`}>
                                 {notification.message}
                             </p>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 {notification.actionUrl && (
                                     <a
                                         href={notification.actionUrl}
-                                        className={`text-xs font-bold px-4 py-2 rounded-full transition-colors ${
+                                        className={`text-[10px] sm:text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-colors ${
                                             isUnread
                                                 ? "bg-primary text-white hover:bg-primary/90"
                                                 : "border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800"
@@ -270,7 +270,7 @@ function NotificationSection({
                                 {isUnread && (
                                     <button
                                         onClick={() => onMarkAsRead(notification.id)}
-                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xs font-bold px-2 py-1 transition-colors"
+                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[10px] sm:text-xs font-bold px-2 py-1 transition-colors"
                                     >
                                         Dismiss
                                     </button>

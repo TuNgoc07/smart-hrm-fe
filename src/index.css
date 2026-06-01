@@ -5,4 +5,25 @@
     background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
     background-size: 20px 20px;
   }
-  
+
+.ai-gradient-border {
+  border-radius: 16px;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg, rgba(19, 127, 236, 0.38) 0%, rgba(19, 127, 236, 0.08) 50%, rgba(19, 127, 236, 0.38) 100%) border-box;
+  border: 1.5px solid transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ai-gradient-border {
+    background:
+      linear-gradient(rgb(15 23 42), rgb(15 23 42)) padding-box,
+      linear-gradient(135deg, rgba(19, 127, 236, 0.45) 0%, rgba(19, 127, 236, 0.1) 50%, rgba(19, 127, 236, 0.45) 100%) border-box;
+  }
+}
+
+.dark .ai-gradient-border {
+  background:
+    linear-gradient(rgb(15 23 42), rgb(15 23 42)) padding-box,
+    linear-gradient(135deg, rgba(19, 127, 236, 0.45) 0%, rgba(19, 127, 236, 0.1) 50%, rgba(19, 127, 236, 0.45) 100%) border-box;
+}

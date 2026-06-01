@@ -12,9 +12,7 @@ export default function EmployeeLayout() {
         </div>
         <main className="flex-1">
           <EmployeeHeader />
-          <div className="p-4 sm:p-6 md:p-8">
-            <Outlet />
-          </div>
+          <Outlet />
         </main>
       </div>
     </NotificationProvider>

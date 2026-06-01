@@ -7,13 +7,10 @@ export default function HRAdminLayout() {
     <div className="flex min-h-screen bg-background-light">
       <HRSidebar />
 
-      <main className="flex-1 ml-72">
+      <main className="flex-1">
         <HRHeader />
 
-        {/* 🔥 CÁI QUAN TRỌNG NHẤT */}
-        <div className="p-8">
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
     </div>
   );

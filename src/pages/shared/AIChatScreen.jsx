@@ -1,6 +1,166 @@
 import React, { useState, useEffect, useRef } from "react";
 import { sendAiChatMessage, fetchAiChatHistory } from "../../utils/employeeApi";
-import { Send, Bot, User, RefreshCw, ChevronRight, ArrowRight } from "lucide-react";
+import MessageRenderer from "../../components/ai/MessageRenderer";
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const ROLE_STARTERS = {
+    hr_admin: {
+        content:
+            "Xin chào! Tôi là HR AI Assistant. Tôi có thể giúp bạn phân tích dữ liệu toàn công ty — chấm công, lương, hợp đồng, đơn từ và nhân sự. Bạn muốn xem thông tin gì hôm nay?",
+        uiComponents: {
+            ui_type: "text",
+            metrics: [],
+            table: null,
+            action_buttons: [],
+            suggested_questions: [
+                "Ai chưa chấm công hôm nay?",
+                "Tổng chi phí OT tháng này là bao nhiêu?",
+                "Có hợp đồng nào sắp hết hạn không?",
+                "Thống kê nhân viên đi trễ tuần này?",
+            ],
+        },
+    },
+    manager: {
+        content:
+            "Xin chào! Tôi là HR AI Assistant. Tôi có thể giúp bạn theo dõi tình hình nhóm — chấm công, đơn từ và hiệu suất từng thành viên trong phòng ban. Bạn cần kiểm tra gì?",
+        uiComponents: {
+            ui_type: "text",
+            metrics: [],
+            table: null,
+            action_buttons: [],
+            suggested_questions: [
+                "Ai trong team chưa check-in hôm nay?",
+                "Ai đi trễ nhiều nhất tuần này?",
+                "Có đơn xin nghỉ phép nào đang chờ duyệt không?",
+                "Tổng giờ OT của team tháng này?",
+            ],
+        },
+    },
+    employee: {
+        content:
+            "Xin chào! Tôi là HR AI Assistant. Tôi có thể giúp bạn tra cứu thông tin cá nhân — lịch sử chấm công, bảng lương, số ngày phép còn lại và đơn từ. Bạn cần hỗ trợ gì?",
+        uiComponents: {
+            ui_type: "text",
+            metrics: [],
+            table: null,
+            action_buttons: [],
+            suggested_questions: [
+                "Tôi còn bao nhiêu ngày phép năm nay?",
+                "Bảng lương tháng này của tôi như thế nào?",
+                "Lịch chấm công của tôi tuần này?",
+                "Đơn xin nghỉ phép của tôi đang ở trạng thái nào?",
+            ],
+        },
+    },
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function getUserRole() {
+    try {
+        const roles = JSON.parse(localStorage.getItem("roles") || "[]");
+        if (roles.includes("hr_admin")) return "hr_admin";
+        if (roles.includes("manager")) return "manager";
+        return "employee";
+    } catch {
+        return "employee";
+    }
+}
+
+function getUserRoleLabel(role) {
+    const map = { hr_admin: "HR ADMIN", manager: "MANAGER", employee: "EMPLOYEE" };
+    return map[role] || "USER";
+}
+
+function safeParseAiMessage(rawContent, uiComponents) {
+    if (!rawContent || typeof rawContent !== "string") return { content: rawContent, uiComponents };
+    const trimmed = rawContent.trim();
+    if (!trimmed.startsWith("{")) return { content: rawContent, uiComponents };
+    try {
+        const parsed = JSON.parse(trimmed);
+        if (!parsed.answer) return { content: rawContent, uiComponents };
+        const extractedUi = uiComponents ?? (parsed.ui_type !== undefined ? {
+            ui_type: parsed.ui_type || "text",
+            metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [],
+            table: parsed.table && parsed.table.columns ? parsed.table : null,
+            action_buttons: Array.isArray(parsed.action_buttons) ? parsed.action_buttons : [],
+            suggested_questions: Array.isArray(parsed.suggested_questions) ? parsed.suggested_questions : [],
+        } : null);
+        return { content: parsed.answer, uiComponents: extractedUi };
+    } catch {
+        return { content: rawContent, uiComponents };
+    }
+}
+
+function formatTime(timestamp) {
+    if (!timestamp) return "";
+    try {
+        const normalized = timestamp.replace(" ", "T");
+        return new Date(normalized).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    } catch {
+        return "";
+    }
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function RoleStarterBubble({ roleKey, onFollowUp }) {
+    const starter = ROLE_STARTERS[roleKey] || ROLE_STARTERS.employee;
+    return (
+        <div className="flex items-start gap-3 justify-start px-6 py-6">
+            <div className="size-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-5">
+                <span className="material-symbols-outlined text-white text-lg">auto_awesome</span>
+            </div>
+            <div className="flex flex-col gap-1 items-start max-w-[80%]">
+                <p className="text-[#4c739a] text-[11px] font-bold uppercase tracking-wider">
+                    AI Assistant
+                </p>
+                <MessageRenderer
+                    content={starter.content}
+                    uiComponents={starter.uiComponents}
+                    onFollowUp={onFollowUp}
+                />
+            </div>
+        </div>
+    );
+}
+
+function LoadingBubble() {
+    return (
+        <div className="flex items-start gap-3 justify-start px-6">
+            <div className="size-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-5">
+                <span className="material-symbols-outlined text-white text-lg">auto_awesome</span>
+            </div>
+            <div className="flex flex-col gap-1 items-start">
+                <p className="text-[#4c739a] text-[11px] font-bold uppercase tracking-wider">
+                    AI Assistant
+                </p>
+                <div className="ai-gradient-border px-5 py-4 shadow-sm">
+                    <div className="flex gap-1.5 items-center">
+                        <span
+                            className="w-2 h-2 bg-primary/70 rounded-full animate-bounce"
+                            style={{ animationDelay: "0ms" }}
+                        />
+                        <span
+                            className="w-2 h-2 bg-primary/70 rounded-full animate-bounce"
+                            style={{ animationDelay: "150ms" }}
+                        />
+                        <span
+                            className="w-2 h-2 bg-primary/70 rounded-full animate-bounce"
+                            style={{ animationDelay: "300ms" }}
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Main Screen ────────────────────────────────────────────────────────────────
 
 export default function AIChatScreen() {
     const [messages, setMessages] = useState([]);
@@ -8,14 +168,17 @@ export default function AIChatScreen() {
     const [loading, setLoading] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(true);
     const messagesEndRef = useRef(null);
+    const userRoleKey = getUserRole();
+    const userRole = getUserRoleLabel(userRoleKey);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    const currentPeriod = new Date().toLocaleString("en-US", {
+        month: "long",
+        year: "numeric",
+    });
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, loading]);
 
     useEffect(() => {
         loadHistory();
@@ -26,12 +189,18 @@ export default function AIChatScreen() {
             setHistoryLoading(true);
             const data = await fetchAiChatHistory();
             if (data && Array.isArray(data)) {
-                setMessages(data.map(h => ({
-                    role: "assistant",
-                    content: h.answer,
-                    uiComponents: h.uiComponents,
-                    timestamp: h.timestamp,
-                })));
+                const msgs = [];
+                [...data].reverse().forEach((h) => {
+                    msgs.push({ role: "user", content: h.question, timestamp: h.timestamp });
+                    const { content, uiComponents } = safeParseAiMessage(h.answer, null);
+                    msgs.push({
+                        role: "assistant",
+                        content,
+                        uiComponents,
+                        timestamp: h.timestamp,
+                    });
+                });
+                setMessages(msgs);
             }
         } catch (e) {
             console.error("Failed to load chat history:", e);
@@ -40,232 +209,217 @@ export default function AIChatScreen() {
         }
     };
 
-    const handleSend = async (e) => {
-        e.preventDefault();
-        if (!input.trim() || loading) return;
+    const sendMessage = async (questionOverride) => {
+        const q = (questionOverride || input).trim();
+        if (!q || loading) return;
 
-        const userMessage = { role: "user", content: input };
-        setMessages(prev => [...prev, userMessage]);
         setInput("");
+        setMessages((prev) => [...prev, { role: "user", content: q }]);
         setLoading(true);
 
         try {
-            const response = await sendAiChatMessage(input);
-            setMessages(prev => [...prev, {
-                role: "assistant",
-                content: response.answer,
-                uiComponents: response.uiComponents,
-                sources: response.sources,
-                timestamp: response.timestamp,
-            }]);
-        } catch (err) {
-            setMessages(prev => [...prev, {
-                role: "assistant",
-                content: "Xin lỗi, có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại.",
-                uiComponents: null,
-            }]);
+            const res = await sendAiChatMessage(q);
+            const { content, uiComponents } = safeParseAiMessage(res.answer, res.uiComponents);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    content,
+                    uiComponents,
+                    timestamp: res.timestamp,
+                },
+            ]);
+        } catch {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    content: "AI service is temporarily unavailable. Please try again later.",
+                    uiComponents: null,
+                },
+            ]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSuggestedQuestion = (question) => {
-        setInput(question);
-        handleSend({ preventDefault: () => {} });
-    };
-
-    const renderMetrics = (metrics) => (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mb-4">
-            {metrics.map((m, i) => (
-                <div key={i} className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-lg p-3 sm:p-4 border border-slate-200 dark:border-slate-700">
-                    <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{m.label}</div>
-                    <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{m.value}</div>
-                    {m.trend && (
-                        <div className={`text-xs mt-1 flex items-center gap-1 ${
-                            m.trend_direction === "up" ? "text-emerald-600" : 
-                            m.trend_direction === "down" ? "text-red-600" : "text-slate-500"
-                        }`}>
-                            {m.trend_direction === "up" && <ArrowRight className="w-3 h-3 rotate-[-45deg]" />}
-                            {m.trend_direction === "down" && <ArrowRight className="w-3 h-3 rotate-[135deg]" />}
-                            {m.trend}
-                        </div>
-                    )}
-                </div>
-            ))}
-        </div>
-    );
-
-    const renderTable = (table) => (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 mb-4">
-            <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800">
-                    <tr>
-                        {table.columns.map((col, i) => (
-                            <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">
-                                {col}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {table.rows.map((row, ri) => (
-                        <tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            {row.map((cell, ci) => (
-                                <td key={ci} className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                                    {cell}
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-
-    const renderActionButtons = (buttons) => (
-        <div className="flex flex-wrap gap-2 mb-4">
-            {buttons.map((btn, i) => (
-                <button
-                    key={i}
-                    onClick={() => window.location.href = btn.route}
-                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
-                >
-                    {btn.icon && <span className="text-base sm:text-lg">{btn.icon}</span>}
-                    <span className="truncate">{btn.label}</span>
-                    <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4 flex-shrink-0" />
-                </button>
-            ))}
-        </div>
-    );
-
-    const renderSuggestedQuestions = (questions) => (
-        <div className="flex flex-wrap gap-2 mb-4">
-            {questions.map((q, i) => (
-                <button
-                    key={i}
-                    onClick={() => handleSuggestedQuestion(q)}
-                    className="px-2.5 sm:px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-xs sm:text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
-                >
-                    {q}
-                </button>
-            ))}
-        </div>
-    );
-
-    const renderMessage = (msg, index) => {
-        const isUser = msg.role === "user";
-        const ui = msg.uiComponents;
-
-        return (
-            <div key={index} className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-                {!isUser && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
-                        <Bot className="w-4 h-4 text-white" />
-                    </div>
-                )}
-                <div className={`max-w-[85%] sm:max-w-[80%] ${isUser ? "bg-primary text-white" : "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"} rounded-2xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm border ${isUser ? "border-primary" : "border-slate-200 dark:border-slate-700"}`}>
-                    {!isUser && ui && (
-                        <div className="space-y-3">
-                            {ui.metrics && ui.metrics.length > 0 && renderMetrics(ui.metrics)}
-                            {ui.table && renderTable(ui.table)}
-                            {ui.action_buttons && ui.action_buttons.length > 0 && renderActionButtons(ui.action_buttons)}
-                            {ui.suggested_questions && ui.suggested_questions.length > 0 && renderSuggestedQuestions(ui.suggested_questions)}
-                        </div>
-                    )}
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                        {msg.content}
-                    </div>
-                    {msg.timestamp && (
-                        <div className={`text-xs mt-2 ${isUser ? "text-white/70" : "text-slate-400"}`}>
-                            {new Date(msg.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                    )}
-                </div>
-                {isUser && (
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                    </div>
-                )}
-            </div>
-        );
-    };
+    const isEmpty = messages.length === 0 && !historyLoading;
 
     return (
-        <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4 gap-3">
-                <div className="min-w-0">
-                    <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white truncate">AI Assistant</h1>
-                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">Hỏi bất kỳ điều gì về HRM của bạn</p>
+        <div className="flex flex-col h-[calc(100vh-64px)] min-h-0">
+
+            {/* ── Header ──────────────────────────────────────────────────── */}
+            <div className="shrink-0 flex items-center justify-between px-6 py-3.5 border-b border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="flex items-center gap-8">
+                    <h1 className="text-[17px] font-extrabold text-[#0d141b] dark:text-white tracking-tight">
+                        HR AI Assistant
+                    </h1>
+                    <div className="hidden sm:flex items-center gap-6">
+                        <div className="flex flex-col leading-none">
+                            <span className="text-[10px] font-bold text-[#4c739a] uppercase tracking-widest">
+                                SCOPE
+                            </span>
+                            <span className="text-sm font-bold text-primary flex items-center gap-0.5 mt-0.5">
+                                Whole Company
+                                <span className="material-symbols-outlined text-sm">
+                                    keyboard_arrow_down
+                                </span>
+                            </span>
+                        </div>
+                        <div className="flex flex-col leading-none">
+                            <span className="text-[10px] font-bold text-[#4c739a] uppercase tracking-widest">
+                                PERIOD
+                            </span>
+                            <span className="text-sm font-bold text-primary flex items-center gap-0.5 mt-0.5">
+                                {currentPeriod}
+                                <span className="material-symbols-outlined text-sm">
+                                    keyboard_arrow_down
+                                </span>
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <button
-                    onClick={loadHistory}
-                    disabled={historyLoading}
-                    className="flex items-center gap-2 px-2 md:px-3 py-2 text-xs md:text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors flex-shrink-0"
-                >
-                    <RefreshCw className={`w-4 h-4 ${historyLoading ? "animate-spin" : ""}`} />
-                    <span className="hidden sm:inline">Làm mới</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={() => setMessages([])}
+                        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0d141b] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-[#e7edf3] dark:border-slate-700"
+                    >
+                        <span className="material-symbols-outlined text-sm">table_rows</span>
+                        Clear Conversation
+                    </button>
+                    <button
+                        onClick={() => setMessages([])}
+                        className="sm:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Clear conversation"
+                    >
+                        <span className="material-symbols-outlined text-xl text-[#4c739a]">
+                            table_rows
+                        </span>
+                    </button>
+                    <button className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <span className="material-symbols-outlined text-xl text-[#4c739a]">settings</span>
+                    </button>
+                    <button className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <span className="material-symbols-outlined text-xl text-[#4c739a]">
+                            notifications
+                        </span>
+                    </button>
+                </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 px-1 sm:px-2 pb-4">
+            {/* ── Messages Area ────────────────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto min-h-0 bg-[#f6f7f8] dark:bg-[#101922]">
                 {historyLoading ? (
-                    <div className="flex items-center justify-center h-full text-slate-400">
-                        <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-                        Đang tải lịch sử...
+                    <div className="flex items-center justify-center h-full gap-2 text-[#4c739a]">
+                        <span className="material-symbols-outlined animate-spin text-xl">
+                            progress_activity
+                        </span>
+                        <span className="text-sm">Loading conversation...</span>
                     </div>
-                ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center space-y-3 sm:space-y-4 px-4">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                            <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                        </div>
-                        <div className="max-w-sm">
-                            <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Xin chào!</h3>
-                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                                Tôi có thể giúp bạn tìm thông tin về chấm công, lương, ngày phép, đơn từ và nhiều hơn nữa.
-                            </p>
-                        </div>
-                    </div>
+                ) : isEmpty ? (
+                    <RoleStarterBubble roleKey={userRoleKey} onFollowUp={sendMessage} />
                 ) : (
-                    messages.map((msg, i) => renderMessage(msg, i))
-                )}
-                {loading && (
-                    <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
-                            <Bot className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl px-4 py-3 shadow-sm border border-slate-200 dark:border-slate-700">
-                            <div className="flex gap-1">
-                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                            </div>
-                        </div>
+                    <div className="py-6 space-y-6">
+                        {messages.map((msg, i) =>
+                            msg.role === "user" ? (
+                                /* ── User Message ─────────────────────────── */
+                                <div key={i} className="flex items-start gap-3 justify-end px-6">
+                                    <div className="flex flex-col gap-1 items-end max-w-[72%]">
+                                        <p className="text-[#4c739a] text-[11px] font-bold uppercase tracking-wider">
+                                            {userRole}
+                                        </p>
+                                        <div className="bg-primary px-5 py-3 rounded-2xl rounded-tr-sm shadow-sm">
+                                            <p className="text-white text-sm leading-relaxed">
+                                                {msg.content}
+                                            </p>
+                                        </div>
+                                        {msg.timestamp && (
+                                            <span className="text-[10px] text-[#4c739a]">
+                                                {formatTime(msg.timestamp)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="size-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0 mt-5">
+                                        <span className="material-symbols-outlined text-slate-600 dark:text-slate-300 text-lg">
+                                            person
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ── AI Message ───────────────────────────── */
+                                <div key={i} className="flex items-start gap-3 justify-start px-6">
+                                    <div className="size-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-5">
+                                        <span className="material-symbols-outlined text-white text-lg">
+                                            auto_awesome
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col gap-1 items-start max-w-[80%]">
+                                        <p className="text-[#4c739a] text-[11px] font-bold uppercase tracking-wider">
+                                            AI Assistant
+                                        </p>
+                                        <MessageRenderer
+                                            content={msg.content}
+                                            uiComponents={msg.uiComponents}
+                                            onFollowUp={sendMessage}
+                                        />
+                                        {msg.timestamp && (
+                                            <span className="text-[10px] text-[#4c739a]">
+                                                {formatTime(msg.timestamp)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        )}
                     </div>
                 )}
+
+                {loading && <LoadingBubble />}
+
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <form onSubmit={handleSend} className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Nhập câu hỏi của bạn..."
-                    disabled={loading}
-                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm"
-                />
-                <button
-                    type="submit"
-                    disabled={loading || !input.trim()}
-                    className="px-4 sm:px-6 py-2.5 sm:py-3 bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium text-sm"
+            {/* ── Input Bar ───────────────────────────────────────────────── */}
+            <div className="shrink-0 bg-white dark:bg-slate-900 border-t border-[#e7edf3] dark:border-slate-800">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        sendMessage();
+                    }}
+                    className="flex items-center gap-3 px-6 py-4"
                 >
-                    <Send className="w-4 h-4" />
-                    <span className="hidden sm:inline">Gửi</span>
-                </button>
-            </form>
+                    <div className="flex-1 flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-[#e7edf3] dark:border-slate-700 rounded-xl focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+                        <span className="material-symbols-outlined text-[#4c739a] text-xl shrink-0">
+                            auto_awesome
+                        </span>
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Ask anything about employee data..."
+                            disabled={loading}
+                            className="flex-1 bg-transparent text-sm text-[#0d141b] dark:text-white placeholder:text-[#4c739a] focus:outline-none"
+                        />
+                        <button
+                            type="button"
+                            className="text-[#4c739a] hover:text-primary transition-colors shrink-0"
+                        >
+                            <span className="material-symbols-outlined text-xl">attach_file</span>
+                        </button>
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={loading || !input.trim()}
+                        className="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm transition-colors"
+                    >
+                        <span className="hidden sm:inline">Send</span>
+                        <span className="material-symbols-outlined text-base">send</span>
+                    </button>
+                </form>
+                <p className="text-center text-[11px] text-[#4c739a] pb-3">
+                    AI can analyze data but cannot perform automated actions like final approvals
+                </p>
+            </div>
         </div>
     );
 }

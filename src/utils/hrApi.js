@@ -85,6 +85,16 @@ export async function assignChecklist(employeeId, templateId, dueDate) {
     return json.status === "success" ? json.data : null;
 }
 
+// ── Payroll Dashboard ─────────────────────────────────────────────────────
+
+export async function fetchPayrollDashboard() {
+    const res = await fetch(`${BASE_URL}/api/hradmin/payroll-cycles/dashboard`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Payroll dashboard fetch failed: ${res.status}`);
+    return await res.json();
+}
+
 export async function reviewChecklistResponse(responseId, status, notes) {
     const res = await fetch(`${BASE_URL}/api/hradmin/checklists/responses/${responseId}/review`, {
         method: "PATCH",
@@ -94,4 +104,49 @@ export async function reviewChecklistResponse(responseId, status, notes) {
     if (!res.ok) throw new Error(`Review failed: ${res.status}`);
     const json = await res.json();
     return json.status === "success" ? json.data : null;
+}
+
+// ── AI Insights ───────────────────────────────────────────────────────────
+
+/**
+ * Lấy toàn bộ AI Insights trong 1 lần gọi — dùng cho AIInsightScreen dashboard.
+ * Trả về: { kpi, attendanceAnomalies, payrollAnomalies, generatedAt }
+ *
+ * @param {number} lookbackDays số ngày nhìn về cho attendance analysis (mặc định 30)
+ */
+export async function fetchAiInsightsSummary(lookbackDays = 30) {
+    const res = await fetch(
+        `${BASE_URL}/api/hradmin/ai-insights/summary?lookbackDays=${lookbackDays}`,
+        { headers: getHeaders() }
+    );
+    if (!res.ok) throw new Error(`AI Insights summary fetch failed: ${res.status}`);
+    return await res.json();
+}
+
+/**
+ * Lấy danh sách nhân viên có bất thường chấm công.
+ * Trả về: List<AttendanceAnomalyDTO> sắp xếp HIGH → MEDIUM → LOW
+ *
+ * @param {number} lookbackDays số ngày phân tích (mặc định 30)
+ */
+export async function fetchAttendanceAnomalies(lookbackDays = 30) {
+    const res = await fetch(
+        `${BASE_URL}/api/hradmin/ai-insights/attendance-anomalies?lookbackDays=${lookbackDays}`,
+        { headers: getHeaders() }
+    );
+    if (!res.ok) throw new Error(`Attendance anomalies fetch failed: ${res.status}`);
+    return await res.json();
+}
+
+/**
+ * Lấy danh sách nhân viên có bất thường lương (so sánh với baseline 6 kỳ trước).
+ * Trả về: List<PayrollAnomalyDTO> sắp xếp HIGH → MEDIUM
+ */
+export async function fetchPayrollAnomalies() {
+    const res = await fetch(
+        `${BASE_URL}/api/hradmin/ai-insights/payroll-anomalies`,
+        { headers: getHeaders() }
+    );
+    if (!res.ok) throw new Error(`Payroll anomalies fetch failed: ${res.status}`);
+    return await res.json();
 }

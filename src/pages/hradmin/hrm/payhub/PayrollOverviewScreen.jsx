@@ -1,63 +1,127 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchPayrollDashboard } from "../../../../utils/hrApi";
 
 export default function PayrollOverviewScreen() {
   const navigate = useNavigate();
-    return (
-      <div className="space-y-8 ">
-  
-        {/* ================= HEADER ================= */}
-        <Header />
-  
-        {/* ================= KPI CARDS ================= */}
-        <KPISection />
-  
-        {/* ================= PAYROLL WORKFLOW ================= */}
-        <PayrollWorkflow />
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
 
-        {/* ================= AI INSIGHTS SECTION ================= */}
-        <InsightSection/>
-  
-        {/* ================= MAIN CONTENT ================= */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-          <AlertsSection />
-          <TimelineSection />
-          <QuickActions onClick = {navigate} />
-        </div>
+  useEffect(() => {
+    fetchPayrollDashboard()
+      .then((d) => setData(d))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-5">
+        <span className="material-symbols-outlined text-red-500">error</span>
+        <p className="text-sm text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  const kpi      = data?.kpi      ?? {};
+  const workflow = data?.workflow  ?? {};
+  const alerts   = data?.alerts   ?? [];
+  const timeline = data?.timeline ?? [];
+  const insights = data?.insights ?? {};
+
+  return (
+    <div className="space-y-8">
+
+      {/* ================= HEADER ================= */}
+      <Header cycleName={data?.cycleName} status={data?.status} startDate={data?.startDate} endDate={data?.endDate} />
+
+      {/* ================= KPI CARDS ================= */}
+      <KPISection kpi={kpi} />
+
+      {/* ================= PAYROLL WORKFLOW ================= */}
+      <PayrollWorkflow workflow={workflow} />
+
+      {/* ================= AI INSIGHTS SECTION ================= */}
+      <InsightSection insights={insights} />
+
+      {/* ================= MAIN CONTENT ================= */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <AlertsSection alerts={alerts} />
+        <TimelineSection timeline={timeline} />
+        <QuickActions onClick={navigate} />
+      </div>
+    </div>
+  );
+}
   
   /* ================================================= */
   /* ================= HEADER ======================== */
   /* ================================================= */
-  
-  function Header() {
+
+  function Header({ cycleName, status, startDate, endDate }) {
+    const statusColor = {
+      open: "text-green-600",
+      attendance_closed: "text-amber-600",
+      payroll_processing: "text-blue-600",
+      completed: "text-indigo-600",
+    }[status?.toLowerCase()] ?? "text-slate-500";
+
+    const statusLabel = {
+      open: "Open",
+      attendance_closed: "Attendance Closed",
+      payroll_processing: "Processing",
+      completed: "Completed",
+    }[status?.toLowerCase()] ?? status ?? "—";
+
+    const periodLabel = startDate && endDate
+      ? `${new Date(startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${new Date(endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+      : "No active cycle";
+
     return (
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold">Payroll Dashboard</h1>
+          <h1 className="text-xl font-bold">{cycleName ?? "Payroll Dashboard"}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            October 2024 • Status: <span className="text-green-600 font-bold">Open</span>
+            {periodLabel} • Status: <span className={`font-bold ${statusColor}`}>{statusLabel}</span>
           </p>
         </div>
-  
-        
       </div>
     );
   }
-  
+
   /* ================================================= */
   /* ================= KPI SECTION =================== */
   /* ================================================= */
   
-  function KPISection() {
+  function KPISection({ kpi }) {
+    const fmt = (n) => n != null ? Number(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "—";
+    const fmtMoney = (n) => n != null ? Number(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }) : "—";
+
+    const statusAmber = ["attendance_closed", "payroll_processing"].includes(kpi.payrollStatusLabel?.toLowerCase?.() ?? "");
+    const statusGreen = kpi.payrollStatusLabel === "Open";
+
     return (
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <KPI icon="groups" label="Total Employees" value="1,240" note="+2.4%" />
-        <KPI icon="task_alt" label="Attendance" value="1,215 / 1,240" badge="98% Done" green />
-        <KPI icon="pending_actions" label="Payroll Status" value="In Progress" amber />
-        <KPI icon="payments" label="Total Cost" value="$450,200.00" primary />
-        <KPI icon="timer" label="Overtime Cost" value="$12,450.00" red />
+        <KPI icon="groups" label="Total Employees" value={fmt(kpi.totalActiveEmployees)} />
+        <KPI
+          icon="task_alt"
+          label="Attendance"
+          value={`${fmt(kpi.attendanceCompletedCount)} / ${fmt(kpi.attendanceTotalCount)}`}
+          badge={kpi.attendanceRatePct != null ? `${kpi.attendanceRatePct}% Done` : undefined}
+          green
+        />
+        <KPI icon="pending_actions" label="Payroll Status" value={kpi.payrollStatusLabel ?? "—"} amber={statusAmber} green={statusGreen} />
+        <KPI icon="payments" label="Total Cost" value={fmtMoney(kpi.totalCost)} primary />
+        <KPI icon="timer" label="Overtime Cost" value={fmtMoney(kpi.otCost)}
+          note={kpi.otCostTrendLabel !== "N/A" ? kpi.otCostTrendLabel : undefined} red />
       </section>
     );
   }
@@ -96,51 +160,39 @@ export default function PayrollOverviewScreen() {
   /* ================= WORKFLOW ====================== */
   /* ================================================= */
   
-  function PayrollWorkflow() {
+  function PayrollWorkflow({ workflow }) {
+    const hasPendingIssues = (workflow.pendingRequestCount > 0) || (workflow.pendingExceptionCount > 0);
+    const totalIssues = (workflow.pendingRequestCount ?? 0) + (workflow.pendingExceptionCount ?? 0);
+
+    const step1Status = workflow.attendanceClosed ? "done" : "active";
+    const step2Status = workflow.attendanceClosed
+      ? hasPendingIssues ? "warning" : "done"
+      : "locked";
+    const step3Status = workflow.payrollCalculated ? "done" : "locked";
+    const step4Status = workflow.payrollLocked ? "done" : "locked";
+
+    const line1 = workflow.attendanceClosed ? "completedLine" : "incompletedLine";
+    const line2 = workflow.attendanceClosed && !hasPendingIssues ? "completedLine" : "incompletedLine";
+    const line3 = workflow.payrollCalculated ? "completedLine" : "incompletedLine";
+
     return (
       <section className="bg-white border rounded-xl p-6 shadow-sm">
         <h3 className="font-bold mb-6">Payroll Cycle Workflow</h3>
-  
         <div className="flex items-center w-full">
-                {/* STEP 1 */}
-                <Step
-                icon="check"
-                label="Attendance Closed"
-                status="done"
-                />
-
-                <Line colorLine = "completedLine" />
-                {/* <Line color = "bg-green-300"/> */}
-
-                {/* STEP 2 */}
-                <Step
-                icon="warning"
-                label="Data Validation In Progress"
-                status="warning"
-                sub="2 Pending Issues"
-                />
-
-                <Line colorLine = "completedLine" />
-                {/* <Line color = "bg-green-300"/> */}
-
-                {/* STEP 3 */}
-                <Step
-                icon="lock"
-                label="Payroll Calculated"
-                status="locked"
-                />
-
-                <Line colorLine ="incompletedLine" />
-                {/* <Line color = "bg-green-300"/> */}
-
-                {/* STEP 4 */}
-                <Step
-                icon="lock"
-                label="Payroll Locked"
-                status="locked"
-                />
+          <Step icon="check" label="Attendance Closed" status={step1Status} />
+          <Line colorLine={line1} />
+          <Step
+            icon={hasPendingIssues ? "warning" : "check"}
+            label="Data Validation"
+            status={step2Status}
+            sub={hasPendingIssues ? `${totalIssues} Pending Issue${totalIssues > 1 ? "s" : ""}` : undefined}
+          />
+          <Line colorLine={line2} />
+          <Step icon={workflow.payrollCalculated ? "check" : "lock"} label="Payroll Calculated" status={step3Status} />
+          <Line colorLine={line3} />
+          <Step icon={workflow.payrollLocked ? "lock" : "lock"} label="Payroll Locked" status={step4Status} />
         </div>
-    </section>
+      </section>
     );
   }
   
@@ -173,38 +225,45 @@ export default function PayrollOverviewScreen() {
   /* ================================================= */
   /* ================= AI INSIGHTS SECTION ================= */
   /* ================================================= */
-  function InsightSection(){
+  function InsightSection({ insights }) {
+    const trendDir  = insights.otCostTrendDirection;
+    const trendIcon = trendDir === "up" ? "trending_up" : trendDir === "down" ? "trending_down" : "trending_flat";
+    const trendDesc = insights.otCostTrendLabel && insights.otCostTrendLabel !== "N/A"
+      ? `OT cost ${trendDir === "up" ? "increased" : "decreased"} ${insights.otCostTrendLabel} vs last cycle`
+      : "Not enough data to compare yet";
+
+    const anomalyDesc = insights.anomalyCount > 0
+      ? `${insights.anomalyCount} employee${insights.anomalyCount > 1 ? "s have" : " has"} manual payroll adjustments`
+      : "No anomalies detected this cycle";
+
     return (
-      <section className="xl:col-span-5  overflow-hidden">
-        <div className="px-6 py-4 flex items-center">
+      <section className="overflow-hidden">
+        <div className="px-0 py-4 flex items-center">
           <span className="material-symbols-outlined text-blue-400 mr-2">auto_awesome</span>
-          <h2 className="font-bold">AI Payroll Insights </h2>
-          
+          <h2 className="font-bold">AI Payroll Insights</h2>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 flex mb-4 ">
-          <InsightCard 
-            title = "OT Cost Trend"
-            desc = "OT cost increased 12% than last month"
-            icon = "trending_up"
-            tips = "Possible cause: weekend deployment"
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
+          <InsightCard
+            title="OT Cost Trend"
+            desc={trendDesc}
+            icon={trendIcon}
+            tips="Compare with previous payroll cycle"
           />
-          <InsightCard 
-            title = "Payroll Anomaly"
-            desc = "3 employees have abnormal payroll adjustments"
-            icon = "warning"
-            tips = "Review before locking payroll"
+          <InsightCard
+            title="Payroll Anomaly"
+            desc={anomalyDesc}
+            icon="warning"
+            tips={insights.anomalyCount > 0 ? "Review before locking payroll" : "All results look normal"}
           />
-          <InsightCard 
-            title = "Cost Optimization"
-            desc = "High OT detected in Engineer Team"
-            icon = "tips_and_updates"
-            tips = "Suggested Review: shift allocation"
+          <InsightCard
+            title="Cost Summary"
+            desc={insights.topOtDepartment ? `High OT detected in ${insights.topOtDepartment}` : "Insufficient data for department analysis"}
+            icon="tips_and_updates"
+            tips="Review shift allocation if OT is high"
           />
         </div>
       </section>
-      
     );
-
   }
 
   function InsightCard ({title, desc, icon, tips}){
@@ -230,74 +289,64 @@ export default function PayrollOverviewScreen() {
   /* ================= ALERTS & TIMELINE SECTION======================== */
   /* ================================================= */
   
-  function AlertsSection() {
+  function AlertsSection({ alerts }) {
     return (
-      <section className="bg-white border xl:col-span-4 shadow-sm">
+      <section className="bg-white border xl:col-span-4 shadow-sm rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b flex justify-between items-center">
           <h3 className="font-bold">Alerts & Critical Issues</h3>
-          <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded uppercase">
-            3 Action Items
-          </span>
+          {alerts.length > 0 ? (
+            <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded uppercase">
+              {alerts.length} Action Item{alerts.length > 1 ? "s" : ""}
+            </span>
+          ) : (
+            <span className="text-[10px] bg-green-50 text-green-600 font-bold px-2 py-0.5 rounded uppercase">All Clear</span>
+          )}
         </div>
-  
         <div className="divide-y">
-          <Alert
-            icon="notification_important"
-            title="3 OT Requests pending approval"
-            desc="Operations Dept • Required for calculation"
-            amber
-          />
-          <Alert
-            icon="event_busy"
-            title="1 Leave Request waiting for HR"
-            desc="John Doe • Unpaid leave adjustment"
-            primary
-          />
-          <Alert
-            icon="error"
-            title="2 Employees with missing check-ins"
-            desc="Manual override required to proceed"
-            red
-          />
+          {alerts.length === 0 && (
+            <div className="p-6 text-center text-sm text-slate-400">
+              <span className="material-symbols-outlined block text-3xl mb-1 text-green-400">check_circle</span>
+              No action items for this cycle
+            </div>
+          )}
+          {alerts.map((a, i) => (
+            <Alert
+              key={i}
+              icon={a.severity === "red" ? "error" : a.severity === "amber" ? "notification_important" : "info"}
+              title={a.title}
+              desc={a.desc}
+              amber={a.severity === "amber"}
+              red={a.severity === "red"}
+            />
+          ))}
         </div>
       </section>
     );
   }
 
-  function TimelineSection(){
+  function TimelineSection({ timeline }) {
+    const fmtTime = (raw) => {
+      if (!raw) return "—";
+      try {
+        return new Date(raw).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+      } catch { return raw; }
+    };
+
     return (
-      <section className="bg-white border xl:col-span-4 shadow-sm overflow-hidden">
+      <section className="bg-white border xl:col-span-4 shadow-sm rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b flex justify-between items-center">
           <h3 className="font-bold">Payroll Activity Timeline</h3>
-          <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded uppercase">
-            3 Timelines
+          <span className="text-[10px] bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded uppercase">
+            {timeline.length} Event{timeline.length !== 1 ? "s" : ""}
           </span>
         </div>
-  
         <div className="divide-y">
-          <Timeline
-          icon = "check_circle"
-          title = "Attendance Closed"
-          desc = "By HRAdmin • Nguyen Thi A "
-          time = "OCT 22 2026 10:00 AM"
-          color = "bg-green-600"
-          />
-          <Timeline
-          icon = "warning"
-          title = "OT Approved (Partial)"
-          desc = "By HRAdmin • Nguyen Van B "
-          time = "OCT 22 2026 11:00 AM"
-          color = "bg-red-600"
-
-          />
-          <Timeline
-          icon = "hourglass_empty"
-          title = "Payroll Caculation Started"
-          desc = "By HRAdmin • Nguyen Thi A "
-          time = "OCT 22 2026 16:00 PM"
-          color = "bg-blue-600"
-
-          />
+          {timeline.length === 0 && (
+            <div className="p-6 text-center text-sm text-slate-400">No events yet</div>
+          )}
+          {timeline.map((t, i) => (
+            <Timeline key={i} icon={t.icon} title={t.title} desc={t.desc} time={fmtTime(t.time)} color={t.color} />
+          ))}
         </div>
       </section>
     );

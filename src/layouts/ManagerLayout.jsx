@@ -14,9 +14,7 @@ export default function ManagerLayout() {
         <ManagerHeader />
 
         {/* Nội dung page */}
-        <div className="p-8">
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
     </div>
   );

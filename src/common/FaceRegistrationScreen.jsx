@@ -6,16 +6,11 @@ import {
     FilesetResolver,
 } from "@mediapipe/tasks-vision";
 
-const employee = {
-    id: localStorage.getItem("employeeId"),
-    name: "Đinh Viết Lộc",
-    department: "IT Department",
-    position: "Software Engineer",
-};
+const API_BASE_URL_CONST = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 const instructions = [
-    "Hệ thống sẽ tự chụp khi khuôn mặt đạt chuẩn chất lượng",
-    "Ưu tiên ảnh chính diện và quay nhẹ trái/phải",
+    "Cần 3 ảnh: chính diện, nghiêng trái, nghiêng phải",
+    "Hệ thống tự chụp khi khuôn mặt đạt chuẩn — không cần chính xác tuyệt đối",
     "Ánh sáng tốt, không che mặt",
     "Không đeo kính tối màu, khẩu trang",
     "Giữ khuôn mặt trong khung xanh",
@@ -27,35 +22,21 @@ const captureGuides = [
         title: "Ảnh chính diện",
         description: "Nhìn thẳng vào camera",
         icon: "face",
-        instruction: "Vui lòng nhìn thẳng vào camera",
+        instruction: "Nhìn thẳng vào camera — mặt cân đối trong khung",
     },
     {
         id: 2,
-        title: "Ảnh chính diện bổ sung",
-        description: "Giữ mặt thẳng, rõ nét",
-        icon: "face",
-        instruction: "Giữ mặt thẳng, đủ sáng, không che mặt",
+        title: "Nghiêng sang trái",
+        description: "Xoay nhẹ mặt sang trái",
+        icon: "rotate_left",
+        instruction: "Quay mặt nhẹ sang trái khoảng 15–25 độ, mặt vẫn rõ trong khung",
     },
     {
         id: 3,
-        title: "Quay nhẹ trái/phải",
-        description: "Xoay nhẹ sang trái hoặc phải",
-        icon: "sync_alt",
-        instruction: "Quay nhẹ sang trái hoặc phải khoảng 10-25 độ",
-    },
-    {
-        id: 4,
-        title: "Quay nhẹ trái/phải",
-        description: "Thêm một góc lệch nhẹ khác",
-        icon: "sync_alt",
-        instruction: "Giữ góc trái/phải nhẹ, mặt vẫn rõ trong khung",
-    },
-    {
-        id: 5,
-        title: "Ảnh bổ sung",
-        description: "Góc tốt bất kỳ",
-        icon: "add_a_photo",
-        instruction: "Giữ góc mặt rõ, chất lượng tốt để bổ sung hồ sơ",
+        title: "Nghiêng sang phải",
+        description: "Xoay nhẹ mặt sang phải",
+        icon: "rotate_right",
+        instruction: "Quay mặt nhẹ sang phải khoảng 15–25 độ, mặt vẫn rõ trong khung",
     },
 ];
 
@@ -70,8 +51,8 @@ const CAMERA_FACING_MODES = {
     back: "environment",
 };
 
-const MAX_CAPTURES = 5;
-const MIN_ACCEPTED_CAPTURES = 4;
+const MAX_CAPTURES = 3;
+const MIN_ACCEPTED_CAPTURES = 3;
 const AUTO_CAPTURE_SECONDS = 3;
 
 // ===== FACE / QUALITY HELPERS =====
@@ -165,10 +146,10 @@ const detectHandOcclusion = (faceLandmarks, handLandmarksList = []) => {
     }
 
     return {
-        covered: maxOverlap > 0.08,
+        covered: maxOverlap > 0.15,
         confidence: maxOverlap,
         reason:
-            maxOverlap > 0.08
+            maxOverlap > 0.15
                 ? "Bàn tay đang che hoặc chạm vào vùng khuôn mặt"
                 : "No hand overlap",
     };
@@ -272,21 +253,21 @@ const calculateImageQuality = (landmarks, eyeDistance) => {
     const issues = [];
     let score = 100;
 
-    if (eyeDistance < 0.08) {
+    if (eyeDistance < 0.06) {
         issues.push("Khuôn mặt quá nhỏ");
-        score -= 30;
-    } else if (eyeDistance < 0.12) {
+        score -= 20;
+    } else if (eyeDistance < 0.10) {
         issues.push("Nên tiến lại gần camera hơn");
-        score -= 15;
+        score -= 10;
     }
 
     const noseTip = landmarks[1];
     const offsetX = Math.abs(noseTip.x - 0.5);
     const offsetY = Math.abs(noseTip.y - 0.5);
 
-    if (offsetX > 0.3 || offsetY > 0.3) {
+    if (offsetX > 0.35 || offsetY > 0.35) {
         issues.push("Khuôn mặt chưa nằm giữa khung");
-        score -= 20;
+        score -= 15;
     }
 
     const leftEye = landmarks[33];
@@ -296,15 +277,15 @@ const calculateImageQuality = (landmarks, eyeDistance) => {
         Math.pow(rightEye.y - leftEye.y, 2)
     );
 
-    if (eyeDistanceCheck < 0.05) {
+    if (eyeDistanceCheck < 0.04) {
         issues.push("Khó nhận diện khuôn mặt");
-        score -= 25;
+        score -= 15;
     }
 
     return {
         score: Math.max(0, score),
         issues,
-        isGood: score >= 70,
+        isGood: score >= 50,
     };
 };
 
@@ -366,28 +347,28 @@ const detectFaceCoverage = (landmarks) => {
     const noseStable = zConsistency(groups.nose, 0.1);
 
     const details = [
-        { name: "Face outline", visible: outlineVisible, threshold: 0.75 },
-        { name: "Left eye visibility", visible: leftEyeVisible, threshold: 0.75 },
-        { name: "Right eye visibility", visible: rightEyeVisible, threshold: 0.75 },
-        { name: "Left eye consistency", visible: leftEyeStable, threshold: 0.6 },
-        { name: "Right eye consistency", visible: rightEyeStable, threshold: 0.6 },
-        { name: "Nose visibility", visible: noseVisible, threshold: 0.8 },
-        { name: "Nose bridge continuity", visible: noseStable, threshold: 0.65 },
-        { name: "Mouth visibility", visible: mouthVisible, threshold: 0.8 },
+        { name: "Face outline", visible: outlineVisible, threshold: 0.65 },
+        { name: "Left eye visibility", visible: leftEyeVisible, threshold: 0.65 },
+        { name: "Right eye visibility", visible: rightEyeVisible, threshold: 0.65 },
+        { name: "Left eye consistency", visible: leftEyeStable, threshold: 0.5 },
+        { name: "Right eye consistency", visible: rightEyeStable, threshold: 0.5 },
+        { name: "Nose visibility", visible: noseVisible, threshold: 0.7 },
+        { name: "Nose bridge continuity", visible: noseStable, threshold: 0.55 },
+        { name: "Mouth visibility", visible: mouthVisible, threshold: 0.7 },
     ];
 
     const failedChecks = details.filter((item) => item.visible < item.threshold);
 
     const eyesLikelyCovered =
-        leftEyeVisible < 0.75 ||
-        rightEyeVisible < 0.75 ||
-        leftEyeStable < 0.6 ||
-        rightEyeStable < 0.6;
+        leftEyeVisible < 0.65 ||
+        rightEyeVisible < 0.65 ||
+        leftEyeStable < 0.5 ||
+        rightEyeStable < 0.5;
 
     const centerLikelyCovered =
-        noseVisible < 0.8 || noseStable < 0.65 || mouthVisible < 0.8;
+        noseVisible < 0.7 || noseStable < 0.55 || mouthVisible < 0.7;
 
-    const covered = failedChecks.length >= 2 || eyesLikelyCovered || centerLikelyCovered;
+    const covered = failedChecks.length >= 3 || eyesLikelyCovered || centerLikelyCovered;
 
     const avgConfidence =
         details.reduce((sum, item) => sum + item.visible, 0) / details.length;
@@ -424,11 +405,11 @@ const getOcclusionMessage = (faceCoverage) => {
 };
 
 const classifyPose = ({ yaw, pitch }) => {
-    if (Math.abs(yaw) <= 15 && Math.abs(pitch) <= 12) return "frontal";
-    if (yaw < -15 && yaw >= -28 && Math.abs(pitch) <= 18) return "left";
-    if (yaw > 15 && yaw <= 28 && Math.abs(pitch) <= 18) return "right";
-    if (pitch < -12 && pitch >= -20 && Math.abs(yaw) <= 18) return "up";
-    if (pitch > 12 && pitch <= 20 && Math.abs(yaw) <= 18) return "down";
+    if (Math.abs(yaw) <= 20 && Math.abs(pitch) <= 15) return "frontal";
+    if (yaw < -20 && yaw >= -35 && Math.abs(pitch) <= 20) return "left";
+    if (yaw > 20 && yaw <= 35 && Math.abs(pitch) <= 20) return "right";
+    if (pitch < -15 && pitch >= -25 && Math.abs(yaw) <= 20) return "up";
+    if (pitch > 15 && pitch <= 25 && Math.abs(yaw) <= 20) return "down";
     return "extreme";
 };
 
@@ -478,7 +459,7 @@ const validateFrameQuality = (angle) => {
         };
     }
 
-    if (landmarkConfidence < 0.65) {
+    if (landmarkConfidence < 0.5) {
         return {
             ok: false,
             reason: "Không nhận diện rõ khuôn mặt",
@@ -486,7 +467,7 @@ const validateFrameQuality = (angle) => {
         };
     }
 
-    if (imageQuality.score < 55) {
+    if (imageQuality.score < 40) {
         return {
             ok: false,
             reason:
@@ -497,7 +478,7 @@ const validateFrameQuality = (angle) => {
         };
     }
 
-    if (eyeDistance < 0.075) {
+    if (eyeDistance < 0.06) {
         return {
             ok: false,
             reason: "Khuôn mặt quá nhỏ, vui lòng tiến gần hơn",
@@ -505,7 +486,7 @@ const validateFrameQuality = (angle) => {
         };
     }
 
-    if (Math.abs(angle.yaw) > 32 || Math.abs(angle.pitch) > 22) {
+    if (Math.abs(angle.yaw) > 40 || Math.abs(angle.pitch) > 30) {
         return {
             ok: false,
             reason: "Góc mặt quá lệch",
@@ -544,15 +525,16 @@ const validateCaptureSet = (captures) => {
         };
     }
 
-    if (sideCount < 2) {
+    if (sideCount < 1) {
         return {
-            reason: "Cần thêm ít nhất 2 ảnh quay nhẹ trái/phải",
+            ok: false,
+            reason: "Cần ít nhất 1 ảnh nghiêng trái hoặc phải",
         };
     }
 
     return {
         ok: true,
-        reason: "Đã thu thập đủ ảnh đạt chuẩn để đăng ký khuôn mặt",
+        reason: "Đã thu thập đủ ảnh để đăng ký khuôn mặt",
     };
 };
 
@@ -560,7 +542,7 @@ const validateCaptureSet = (captures) => {
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 // Prepare data for backend API
-const prepareFaceRegistrationData = (captures) => {
+const prepareFaceRegistrationData = (captures, employeeId) => {
     const accepted = captures.filter((c) => !c.skipped && c.dataUrl);
 
     // Convert dataUrl to base64 (remove data:image/jpeg;base64, prefix)
@@ -570,7 +552,7 @@ const prepareFaceRegistrationData = (captures) => {
     });
 
     return {
-        employeeId: Number(employee.id), // Convert to Number for Long type
+        employeeId: Number(employeeId), // Convert to Number for Long type
         faceImagesBase64: faceImagesBase64
     };
 };
@@ -581,6 +563,9 @@ const sendFaceRegistration = async (registrationData) => {
         if (!API_BASE_URL) {
             throw new Error("Thiếu VITE_API_BASE_URL");
         }
+
+        const token = localStorage.getItem("token");
+        console.log("Token for face registration:", token ? `${token.substring(0, 20)}...` : "NO TOKEN");
 
         const response = await fetch(`${API_BASE_URL}/api/attendance/face/registration`, {
             method: "POST",
@@ -615,6 +600,33 @@ export default function FaceRegistrationPage() {
     const [validationSummary, setValidationSummary] = useState(null);
     const [retakeIndex, setRetakeIndex] = useState(null);
     const [inlineMessage, setInlineMessage] = useState("");
+    const [employeeInfo, setEmployeeInfo] = useState({
+        id: localStorage.getItem("employeeId") || "",
+        name: "Đang tải...",
+        department: "—",
+        position: "—",
+    });
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        fetch(`${API_BASE_URL_CONST}/api/employee/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((res) => {
+                if (res?.data) {
+                    const d = res.data;
+                    console.log(JSON.stringify(d, null, 2));
+                    setEmployeeInfo({
+                        id: d.employeeId ?? d.id ?? localStorage.getItem("employeeId") ?? "",
+                        name: d.profile?.employeeInfo?.employeeName || "—",
+                        department: d.profile?.employeeInfo?.departmentName || "—",
+                        position: d.profile?.employeeInfo?.positionName || "—",
+                    });
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const completedCount = captures.length;
 
@@ -722,7 +734,7 @@ export default function FaceRegistrationPage() {
 
         try {
             // Prepare data for backend
-            const registrationData = prepareFaceRegistrationData(captures);
+            const registrationData = prepareFaceRegistrationData(captures, employeeInfo.id);
 
             // Send to backend
             const result = await sendFaceRegistration(registrationData);
@@ -784,7 +796,7 @@ export default function FaceRegistrationPage() {
 
                     <div className="hidden lg:grid lg:grid-cols-12 gap-8 items-start">
                         <aside className="lg:col-span-4 space-y-6">
-                            <EmployeeInfoCard employee={employee} />
+                            <EmployeeInfoCard employee={employeeInfo} />
                             <InstructionsCard instructions={instructions} />
                             <CaptureSummaryCard poseStats={poseStats} />
                             <CaptureGallery captures={captures} onPreview={setPreviewImage} onRetakeInvalid={handleRetakeInvalid} />
@@ -797,7 +809,7 @@ export default function FaceRegistrationPage() {
 
                     <div className="lg:hidden space-y-4 sm:space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                            <EmployeeInfoCard employee={employee} />
+                            <EmployeeInfoCard employee={employeeInfo} />
                             <CaptureSummaryCard poseStats={poseStats} />
                         </div>
                         
@@ -1052,27 +1064,23 @@ function CaptureSummaryCard({ poseStats }) {
                 </h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-surface-container p-3">
+            <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded-lg bg-surface-container p-3 text-center">
                     <div className="text-on-surface-variant text-xs">Chính diện</div>
-                    <div className="font-bold text-lg">{poseStats.frontal}</div>
+                    <div className={`font-bold text-lg ${poseStats.frontal >= 1 ? "text-emerald-600" : ""}`}>{poseStats.frontal}</div>
                 </div>
-                <div className="rounded-lg bg-surface-container p-3">
+                <div className="rounded-lg bg-surface-container p-3 text-center">
                     <div className="text-on-surface-variant text-xs">Trái</div>
-                    <div className="font-bold text-lg">{poseStats.left}</div>
+                    <div className={`font-bold text-lg ${poseStats.left >= 1 ? "text-emerald-600" : ""}`}>{poseStats.left}</div>
                 </div>
-                <div className="rounded-lg bg-surface-container p-3">
+                <div className="rounded-lg bg-surface-container p-3 text-center">
                     <div className="text-on-surface-variant text-xs">Phải</div>
-                    <div className="font-bold text-lg">{poseStats.right}</div>
-                </div>
-                <div className="rounded-lg bg-surface-container p-3">
-                    <div className="text-on-surface-variant text-xs">Ngẩng/Cúi</div>
-                    <div className="font-bold text-lg">{poseStats.up + poseStats.down}</div>
+                    <div className={`font-bold text-lg ${poseStats.right >= 1 ? "text-emerald-600" : ""}`}>{poseStats.right}</div>
                 </div>
             </div>
 
             <p className="text-xs text-on-surface-variant mt-4">
-                Tối thiểu cần 1 ảnh chính diện và 2 ảnh quay nhẹ trái/phải.
+                Cần 1 ảnh chính diện và ít nhất 1 ảnh nghiêng trái hoặc phải.
             </p>
         </section>
     );

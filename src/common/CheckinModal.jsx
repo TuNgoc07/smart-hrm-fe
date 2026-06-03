@@ -46,17 +46,17 @@ class LocationDetector {
         return                      { label: "Weak",       color: "orange", icon: "gps_not_fixed" };
     }
 
-    static analyzeGPS(position, officeLat, officeLng) {
+    static analyzeGPS(position, officeLat, officeLng, officeRadius = 100) {
         const { accuracy, latitude, longitude } = position.coords;
         const distance          = this.haversine(latitude, longitude, officeLat, officeLng);
         const effectiveDistance = Math.max(0, distance - accuracy);
-        const withinGeofence    = effectiveDistance <= this.THRESHOLDS.OFFICE_RADIUS;
+        const withinGeofence    = effectiveDistance <= officeRadius;
 
         console.log("=== GPS ANALYSIS ===");
         console.log(`Position:  ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         console.log(`Accuracy:  ±${accuracy.toFixed(1)} m`);
         console.log(`Distance:  ${distance.toFixed(1)} m`);
-        console.log(`EffectiveD:${effectiveDistance.toFixed(1)} m (≤ ${this.THRESHOLDS.OFFICE_RADIUS}m?)`);
+        console.log(`EffectiveD:${effectiveDistance.toFixed(1)} m (≤ ${officeRadius}m?)`);
         console.log(`Pass:      ${withinGeofence ? "YES ✓" : "NO ✗"}`);
 
         return {
@@ -66,6 +66,7 @@ class LocationDetector {
             distance,
             effectiveDistance,
             withinGeofence,
+            officeRadius,
             accuracyInfo:       this.classifyAccuracy(accuracy),
             showAccuracyWarning: accuracy > this.THRESHOLDS.POOR_ACCURACY,
         };
@@ -216,8 +217,12 @@ export default function CheckinModal({ onClose }) {
     const [showConfirm,    setShowConfirm]     = useState(false);
     const [currentTime,    setCurrentTime]     = useState(new Date());
 
-    const OFFICE_LAT = 15.970408691695921;
-    const OFFICE_LNG = 108.24941854122163; // , 
+    const DEFAULT_OFFICE_LAT = 15.970408691695921;
+    const DEFAULT_OFFICE_LNG = 108.24941854122163;
+
+    const [officeLat,    setOfficeLat]    = useState(DEFAULT_OFFICE_LAT);
+    const [officeLng,    setOfficeLng]    = useState(DEFAULT_OFFICE_LNG);
+    const [officeRadius, setOfficeRadius] = useState(100);
 
     const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
@@ -227,9 +232,33 @@ export default function CheckinModal({ onClose }) {
         return () => clearInterval(t);
     }, []);
 
-    useEffect(() => { initGPS(); }, []);
+    useEffect(() => {
+        const fetchLocationAndInit = async () => {
+            let lat    = DEFAULT_OFFICE_LAT;
+            let lng    = DEFAULT_OFFICE_LNG;
+            let radius = 100;
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/attendance/work-location/active`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.data) {
+                        lat    = data.data.latitude    ?? lat;
+                        lng    = data.data.longitude   ?? lng;
+                        radius = data.data.radiusMeters ?? radius;
+                        setOfficeLat(lat);
+                        setOfficeLng(lng);
+                        setOfficeRadius(radius);
+                    }
+                }
+            } catch (_) {}
+            await initGPS(lat, lng, radius);
+        };
+        fetchLocationAndInit();
+    }, []);
 
-    const initGPS = async () => {
+    const initGPS = async (lat = officeLat, lng = officeLng, radius = officeRadius) => {
         if (!navigator.geolocation) {
             setLocationStatus("unsupported");
             return;
@@ -238,13 +267,12 @@ export default function CheckinModal({ onClose }) {
         setGpsError(null);
         try {
             const position = await LocationDetector.getPosition();
-            const analysis = LocationDetector.analyzeGPS(position, OFFICE_LAT, OFFICE_LNG);
+            const analysis = LocationDetector.analyzeGPS(position, lat, lng, radius);
             setGpsData(analysis);
             setLocationStatus(analysis.withinGeofence ? "verified" : "out_of_range");
         } catch (err) {
             console.error("GPS error:", err);
             setGpsError(err);
-            // code 1 = permission denied, code 2 = unavailable, code 3 = timeout
             setLocationStatus(err.code === 1 ? "denied" : "error");
         }
     };
@@ -253,12 +281,12 @@ export default function CheckinModal({ onClose }) {
         try {
             // Lấy vị trí lần cuối trước khi submit
             const position = await LocationDetector.getPosition();
-            const analysis = LocationDetector.analyzeGPS(position, OFFICE_LAT, OFFICE_LNG);
+            const analysis = LocationDetector.analyzeGPS(position, officeLat, officeLng, officeRadius);
 
             if (!analysis.withinGeofence) {
                 return {
                     success: false,
-                    message: `Ngoài phạm vi văn phòng (${analysis.distance.toFixed(0)} m, cho phép ${LocationDetector.THRESHOLDS.OFFICE_RADIUS} m)`,
+                    message: `Ngoài phạm vi văn phòng (${analysis.distance.toFixed(0)} m, cho phép ${officeRadius} m)`,
                 };
             }
 

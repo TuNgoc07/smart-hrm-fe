@@ -32,11 +32,11 @@ class LocationDetector {
     return { label: "Weak", color: "orange" };
   }
 
-  static analyzeGPS(position, officeLat, officeLng) {
+  static analyzeGPS(position, officeLat, officeLng, officeRadius = 100) {
     const { accuracy, latitude, longitude } = position.coords;
     const distance = this.haversine(latitude, longitude, officeLat, officeLng);
     const effectiveDistance = Math.max(0, distance - accuracy);
-    const withinGeofence = effectiveDistance <= this.THRESHOLDS.OFFICE_RADIUS;
+    const withinGeofence = effectiveDistance <= officeRadius;
 
     return {
       latitude,
@@ -45,6 +45,7 @@ class LocationDetector {
       distance,
       effectiveDistance,
       withinGeofence,
+      officeRadius,
       accuracyInfo: this.classifyAccuracy(accuracy),
       showAccuracyWarning: accuracy > this.THRESHOLDS.POOR_ACCURACY,
     };
@@ -99,44 +100,23 @@ class LocationDetector {
   }
 
   static async getPosition() {
-    const attempts = [
-      {
-        options: {
-          enableHighAccuracy: true,
-          timeout: 20000,
-          maximumAge: 0,
-        },
-      },
-      {
-        options: {
-          enableHighAccuracy: true,
-          timeout: 30000,
-          maximumAge: 0,
-        },
-      },
-      {
-        options: {
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 0,
-        },
-      },
-    ];
+    const mobile = this.isMobile();
+    const attempts = mobile
+      ? [
+          { label: "network (WiFi+Cell)", options: { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 } },
+          { label: "high accuracy (GPS)", options: { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 } },
+          { label: "cached", options: { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 } },
+        ]
+      : [
+          { label: "high accuracy (WPS)", options: { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } },
+          { label: "network fallback", options: { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 } },
+        ];
 
     let lastError = null;
 
     for (const attempt of attempts) {
       try {
         const position = await this.getCurrentPositionOnce(attempt.options);
-
-        if (this.isMobile() && position.coords.accuracy > 200) {
-          lastError = this.normalizeGeoError({
-            code: 2,
-            message: `GPS accuracy quá thấp: ±${position.coords.accuracy.toFixed(0)}m`,
-          });
-          continue;
-        }
-
         return position;
       } catch (error) {
         lastError = error;
@@ -148,7 +128,7 @@ class LocationDetector {
 
     throw this.normalizeGeoError(
       lastError,
-      "Không thể lấy GPS chính xác. Hãy bật Location Services, bật Wi-Fi/4G, cấp quyền vị trí và thử lại ngoài trời/gần cửa sổ."
+      "Không thể lấy GPS. Hãy bật Location Services, Wi-Fi/4G, cấp quyền vị trí và thử lại."
     );
   }
 }
@@ -183,6 +163,8 @@ export default function CheckoutModal({
   const [submitError, setSubmitError] = useState("");
   const [autoCountdown, setAutoCountdown] = useState(5);
   const [isAutoCounting, setIsAutoCounting] = useState(false);
+  const [checkoutResult, setCheckoutResult] = useState(null);
+  const [employeeInfo, setEmployeeInfo] = useState(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const canvasRef = useRef(null);
@@ -190,8 +172,11 @@ export default function CheckoutModal({
   const autoCaptureIntervalRef = useRef(null);
   const gpsRetryTimeoutRef = useRef(null);
   const gpsRequestInFlightRef = useRef(false);
-  const OFFICE_LAT = 15.970408691695921;
-  const OFFICE_LNG = 108.24941854122163;
+  const DEFAULT_OFFICE_LAT = 15.970408691695921;
+  const DEFAULT_OFFICE_LNG = 108.24941854122163;
+  const [officeLat,    setOfficeLat]    = useState(DEFAULT_OFFICE_LAT);
+  const [officeLng,    setOfficeLng]    = useState(DEFAULT_OFFICE_LNG);
+  const [officeRadius, setOfficeRadius] = useState(100);
   const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
   useEffect(() => {
@@ -301,18 +286,71 @@ export default function CheckoutModal({
     return undefined;
   }, [cameraReady, open]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const token = localStorage.getItem("token");
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+    const today = new Date().toISOString().split("T")[0];
+
+    fetch(`${baseUrl}/api/attendance/work-location/active`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res?.data) {
+          setOfficeLat(res.data.latitude ?? DEFAULT_OFFICE_LAT);
+          setOfficeLng(res.data.longitude ?? DEFAULT_OFFICE_LNG);
+          setOfficeRadius(res.data.radiusMeters ?? 100);
+        }
+      })
+      .catch(() => {});
+
+    fetch(`${baseUrl}/api/employee/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res?.data) setEmployeeInfo((prev) => ({ ...prev, ...res.data }));
+      })
+      .catch(() => {});
+
+    fetch(`${baseUrl}/api/employee/my-attendance?startDate=${today}&endDate=${today}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        const records = res?.data;
+        if (Array.isArray(records) && records.length > 0 && records[0].checkin) {
+          const checkinTime = records[0].checkin.substring(11, 16);
+          setEmployeeInfo((prev) => ({ ...prev, checkinTime }));
+        }
+      })
+      .catch(() => {});
+
+    return undefined;
+  }, [open]);
+
   const summary = useMemo(() => {
     const checkoutTime = currentTime.toLocaleTimeString("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
     });
 
+    const fmtMin = (minutes) => {
+      if (minutes == null) return "—";
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      if (h > 0 && m > 0) return `${h}h ${m} phút`;
+      if (h > 0) return `${h}h`;
+      return `${m} phút`;
+    };
+
     return {
       checkoutTime,
-      totalHours: "9h 37m",
-      overtime: "12 phút",
-      earlyLeave: "0 phút",
-      similarity: isCompleted ? "98% MATCH" : cameraReady ? "CAMERA READY" : "CHƯA SẴN SÀNG",
+      totalHours: checkoutResult ? fmtMin(checkoutResult.workDurationMinutes) : "—",
+      overtime: checkoutResult ? fmtMin(checkoutResult.overtimeMinutes) : "—",
+      earlyLeave: checkoutResult ? fmtMin(checkoutResult.earlyLeaveMinutes) : "—",
+      similarity: checkoutResult
+        ? `${Math.round((checkoutResult.faceMatchScore || 0) * 100)}% MATCH`
+        : cameraReady ? "CAMERA READY" : "CHƯA SẴN SÀNG",
       liveness: isCompleted ? "Đạt" : hasCaptured ? "Đã chụp ảnh" : isRunning ? "Đang xử lý" : "Chờ xác minh",
       gpsStatus: locationStatus === "verified" ? "HỢP LỆ" : locationStatus === "checking" ? "ĐANG KIỂM TRA" : "CẦN KIỂM TRA",
       locationStatus:
@@ -326,7 +364,7 @@ export default function CheckoutModal({
         : "Lat: --, Long: --",
       shiftStatus: isCompleted ? "ĐÃ CHECKOUT" : "ĐANG LÀM VIỆC",
     };
-  }, [cameraReady, currentAddress, currentTime, gpsData, hasCaptured, isCompleted, isRunning, locationStatus]);
+  }, [cameraReady, checkoutResult, currentAddress, currentTime, gpsData, hasCaptured, isCompleted, isRunning, locationStatus]);
 
   const faceGuides = [
     { icon: "light_mode", text: "Đảm bảo đủ ánh sáng" },
@@ -335,7 +373,7 @@ export default function CheckoutModal({
 
   const timelineItems = [
     {
-      title: `Check-in: ${employee.checkinTime}`,
+      title: `Check-in: ${employeeInfo?.checkinTime || employee.checkinTime}`,  
       detail: "Thành công • Trong khu vực",
       active: true,
     },
@@ -535,7 +573,7 @@ export default function CheckoutModal({
 
     try {
       const position = await LocationDetector.getPosition();
-      const analysis = LocationDetector.analyzeGPS(position, OFFICE_LAT, OFFICE_LNG);
+      const analysis = LocationDetector.analyzeGPS(position, officeLat, officeLng, officeRadius);
       const address = await reverseGeocode(analysis.latitude, analysis.longitude);
       setGpsData(analysis);
       setCurrentAddress(address);
@@ -592,7 +630,7 @@ export default function CheckoutModal({
 
   const refreshVerifiedGPS = async () => {
     const latestPosition = await LocationDetector.getPosition();
-    const analysis = LocationDetector.analyzeGPS(latestPosition, OFFICE_LAT, OFFICE_LNG);
+    const analysis = LocationDetector.analyzeGPS(latestPosition, officeLat, officeLng, officeRadius);
     const address = await reverseGeocode(analysis.latitude, analysis.longitude);
     setGpsData(analysis);
     setCurrentAddress(address);
@@ -653,6 +691,14 @@ export default function CheckoutModal({
     try {
       const analysis = await refreshVerifiedGPS();
 
+      if (!analysis.withinGeofence) {
+        setSubmitError(
+          `Ngoài phạm vi làm việc (${analysis.distance.toFixed(0)} m, cho phép ${officeRadius} m). Vui lòng thử lại khi đang ở văn phòng.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       const payload = {
         employeeId: localStorage.getItem("employeeId"),
         latitude: analysis.latitude,
@@ -686,6 +732,7 @@ export default function CheckoutModal({
         throw new Error(data.message || "Checkout thất bại.");
       }
 
+      if (data.data) setCheckoutResult(data.data);
       setIsCompleted(true);
     } catch (error) {
       setSubmitError(error.message || "Không thể gửi checkout lên backend.");
@@ -818,7 +865,7 @@ export default function CheckoutModal({
               <p className="text-xs font-bold text-[#003d9b]">{summary.locationStatus}</p>
               <p className="flex items-center gap-1 text-xs text-slate-500">
                 <span className="material-symbols-outlined text-[14px]">location_on</span>
-                {currentAddress || employee.workplace}
+                {currentAddress || employeeInfo?.workplace || employee.workplace}
               </p>
               <p className="font-mono text-[10px] text-slate-400">{summary.coordinates}</p>
               {gpsData && (
@@ -864,8 +911,8 @@ export default function CheckoutModal({
           </div>
 
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mb-5">
-            <StatBlock title="Giờ vào" value={employee.checkinTime} />
-            <StatBlock title="Giờ ra dự kiến" value={employee.scheduledCheckout} />
+            <StatBlock title="Giờ vào" value={employeeInfo?.checkinTime || employee.checkinTime} />
+            <StatBlock title="Giờ ra dự kiến" value={employeeInfo?.scheduledCheckout || employee.scheduledCheckout} />
             <div className="col-span-2 flex items-center justify-between rounded-xl bg-[#d9e2ff]/40 p-3.5 lg:p-4">
               <div>
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#003d9b]">

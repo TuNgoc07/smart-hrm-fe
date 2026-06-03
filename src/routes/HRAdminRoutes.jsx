@@ -32,6 +32,7 @@ import LeavePolicyManagementScreen from "../pages/hradmin/hrm/employeeManagement
 import ChecklistTemplateManagementScreen from "../pages/hradmin/hrm/checklist/ChecklistTemplateManagementScreen";
 import ChecklistAssignmentScreen from "../pages/hradmin/hrm/checklist/ChecklistAssignmentScreen";
 import NotificationScreen from "../pages/hradmin/hrm/notification/NotificationScreen";
+import WorkLocationConfigScreen from "../pages/hradmin/hrm/attendance/WorkLocationConfigScreen";
 
 export default function HRAdminRoutes(){
     return (
@@ -67,6 +68,7 @@ export default function HRAdminRoutes(){
                 <Route path="/hr/payroll-config" element={<PayrollConfigurationScreen />} />
                 {/* Cấu hình kỳ chấm công — HR Admin config ngày bắt đầu kỳ 1 lần duy nhất */}
                 <Route path="/hr/attendance-period-config" element={<AttendancePeriodConfigScreen />} />
+                <Route path="/hr/work-locations" element={<WorkLocationConfigScreen />} />
                 <Route path="/hr/holiday-calendar" element={<HolidayCalendarScreen />} />
                 <Route path="/hr/ai-insights" element={<AIInsightsDashboard />} />
                 <Route path="/hr/ai-assistant" element={<AIChatScreen />} />

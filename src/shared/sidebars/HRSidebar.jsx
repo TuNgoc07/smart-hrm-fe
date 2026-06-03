@@ -162,6 +162,10 @@ export default function HRSidebar() {
               <span className="material-symbols-outlined text-lg mr-2">date_range</span>
               Attendance Period Config
             </NavLink>
+            <NavLink to="/hr/work-locations" className={({ isActive }) => `block px-3 py-1.5 rounded-md flex items-center ${isActive ? "text-primary font-semibold bg-primary/10" : "text-slate-600 hover:text-primary hover:bg-slate-100"}`}>
+              <span className="material-symbols-outlined text-lg mr-2">location_on</span>
+              Work Locations
+            </NavLink>
           </div>
         </div>
 

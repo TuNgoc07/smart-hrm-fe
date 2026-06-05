@@ -7,6 +7,8 @@ export default function EditCompensationModal({ isOpen, onClose, compensationDat
     planId: "",
     employeeId: employeeId || "",
     baseSalary: "",
+    insuranceSalary: "",
+    dependentCount: "0",
     salaryType: "monthly",
     // OT 3 tiers theo Điều 107 BLLĐ 2019
     otRate: "150",         // ngày thường ≥ 150%
@@ -27,6 +29,8 @@ export default function EditCompensationModal({ isOpen, onClose, compensationDat
         planId: compensationData.planId || "",
         employeeId: compensationData.employeeId || employeeId || "",
         baseSalary: compensationData.baseSalary || "",
+        insuranceSalary: compensationData.insuranceSalary || "",
+        dependentCount: compensationData.dependentCount?.toString() ?? "0",
         salaryType: compensationData.salaryType || "monthly",
         otRate: compensationData.otRate ?? "150",
         otRateWeekend: compensationData.otRateWeekend ?? "200",
@@ -41,6 +45,8 @@ export default function EditCompensationModal({ isOpen, onClose, compensationDat
         planId: "",
         employeeId: employeeId || "",
         baseSalary: "",
+        insuranceSalary: "",
+        dependentCount: "0",
         salaryType: "monthly",
         otRate: "150",
         otRateWeekend: "200",
@@ -78,10 +84,16 @@ export default function EditCompensationModal({ isOpen, onClose, compensationDat
         otRateHoliday: parseFloat(formData.otRateHoliday) || 300,
       };
 
+      // insuranceSalary: nếu bỏ trống → gửi null → backend tự fallback = baseSalary
+      const insuranceSalaryValue = formData.insuranceSalary ? parseFloat(formData.insuranceSalary) : null;
+      const dependentCountValue = parseInt(formData.dependentCount) || 0;
+
       const payload = isCreate
         ? {
             employeeId: formData.employeeId,
             baseSalary: parseFloat(formData.baseSalary),
+            insuranceSalary: insuranceSalaryValue,
+            dependentCount: dependentCountValue,
             salaryType: formData.salaryType,
             ...otPayload,
             paymentMethod: formData.paymentMethod,
@@ -93,6 +105,8 @@ export default function EditCompensationModal({ isOpen, onClose, compensationDat
         : {
             planId: formData.planId,
             baseSalary: parseFloat(formData.baseSalary),
+            insuranceSalary: insuranceSalaryValue,
+            dependentCount: dependentCountValue,
             salaryType: formData.salaryType,
             ...otPayload,
             paymentMethod: formData.paymentMethod,
@@ -184,6 +198,44 @@ export default function EditCompensationModal({ isOpen, onClose, compensationDat
               min="0"
               step="1000"
             />
+          </div>
+
+          {/* Insurance Salary + Dependent Count */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                Insurance Salary (VND)
+              </label>
+              <input
+                type="number"
+                name="insuranceSalary"
+                value={formData.insuranceSalary}
+                onChange={handleChange}
+                placeholder="Để trống = bằng Base Salary"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                min="0"
+                max="36000000"
+                step="1000"
+              />
+              <p className="text-xs text-slate-400 mt-1">Tối đa 36.000.000 VND (20× lương cơ sở)</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                Số người phụ thuộc
+              </label>
+              <input
+                type="number"
+                name="dependentCount"
+                value={formData.dependentCount}
+                onChange={handleChange}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                min="0"
+                max="20"
+                step="1"
+              />
+              <p className="text-xs text-slate-400 mt-1">Giảm trừ 4.400.000 VND/người/tháng khi tính PIT</p>
+            </div>
           </div>
 
           {/* Salary Type */}

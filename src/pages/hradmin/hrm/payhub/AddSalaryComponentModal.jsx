@@ -116,29 +116,25 @@ export default function AddSalaryComponentModal({ isOpen, onClose, initialData, 
             <select name="componentCode" value={form.componentCode} onChange={handleChange} className="input w-full" required>
               <option value="">-- Chọn mã component --</option>
               <optgroup label="Earnings (Thu nhập)">
-                <option value="BASE_SALARY">BASE_SALARY - Lương cơ bản</option>
-                <option value="OT_NORMAL">OT_NORMAL - OT ngày thường (150%)</option>
-                <option value="OT_WEEKEND">OT_WEEKEND - OT cuối tuần (200%)</option>
-                <option value="OT_HOLIDAY">OT_HOLIDAY - OT lễ/tết (300%)</option>
-                <option value="MEAL_FIXED">MEAL_FIXED - Phụ cấp ăn cố định</option>
-                <option value="MEAL_DAILY">MEAL_DAILY - Phụ cấp ăn theo ngày công</option>
-                <option value="TRANSPORT">TRANSPORT - Phụ cấp đi lại</option>
-                <option value="PHONE">PHONE - Phụ cấp điện thoại</option>
-                <option value="BONUS">BONUS - Thưởng hiệu suất</option>
-                <option value="COMMISSION">COMMISSION - Hoa hồng doanh số</option>
+                <option value="meal_fixed">meal_fixed - Phụ cấp ăn cố định</option>
+                <option value="meal_daily">meal_daily - Phụ cấp ăn theo ngày công</option>
+                <option value="transport">transport - Phụ cấp đi lại</option>
+                <option value="phone">phone - Phụ cấp điện thoại</option>
+                <option value="bonus">bonus - Thưởng hiệu suất</option>
+                <option value="commission">commission - Hoa hồng doanh số</option>
               </optgroup>
               <optgroup label="Deductions (Khấu trừ)">
-                <option value="SI_EMPLOYEE">SI_EMPLOYEE - BHXH người lao động (8%)</option>
-                <option value="HI_EMPLOYEE">HI_EMPLOYEE - BHYT người lao động (1.5%)</option>
-                <option value="UI_EMPLOYEE">UI_EMPLOYEE - BHTN người lao động (1%)</option>
-                <option value="PIT">PIT - Thuế TNCN</option>
-                <option value="PENALTY">PENALTY - Phạt đi muộn</option>
-                <option value="LWOP">LWOP - Nghỉ không lương</option>
+                <option value="si_employee">si_employee - BHXH người lao động (8%)</option>
+                <option value="hi_employee">hi_employee - BHYT người lao động (1.5%)</option>
+                <option value="ui_employee">ui_employee - BHTN người lao động (1%)</option>
+                <option value="pit">pit - Thuế TNCN (progressive tax)</option>
+                <option value="penalty">penalty - Phạt đi muộn</option>
+                <option value="lwop">lwop - Nghỉ không lương</option>
               </optgroup>
               <optgroup label="Employer Contributions (Công ty đóng)">
-                <option value="SI_EMPLOYER">SI_EMPLOYER - BHXH công ty (17.5%)</option>
-                <option value="HI_EMPLOYER">HI_EMPLOYER - BHYT công ty (3%)</option>
-                <option value="UI_EMPLOYER">UI_EMPLOYER - BHTN công ty (1%)</option>
+                <option value="si_employer">si_employer - BHXH công ty (17.5%)</option>
+                <option value="hi_employer">hi_employer - BHYT công ty (3%)</option>
+                <option value="ui_employer">ui_employer - BHTN công ty (1%)</option>
               </optgroup>
             </select>
             <p className="text-xs text-slate-400 mt-1">

@@ -376,6 +376,7 @@ function StatutoryTab() {
   const [toast, setToast]           = useState(null);
   const [editBracket, setEditBracket] = useState(null);
   const [showBracketForm, setShowBracketForm] = useState(false);
+  const [validation, setValidation] = useState(null); // { valid, issues, missingKeys, pitBracketsCount }
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -385,14 +386,19 @@ function StatutoryTab() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch(STATUTORY_API, { headers: authH() });
-      const data = await res.json();
+      const [res, valRes] = await Promise.all([
+        fetch(STATUTORY_API, { headers: authH() }),
+        fetch(`${STATUTORY_API}/validation`, { headers: authH() }),
+      ]);
+      const data    = await res.json();
+      const valData = await valRes.json();
       if (data.status === "success") {
         const map = {};
         (data.configs || []).forEach(c => { map[c.configKey] = c.configValue; });
         setConfigs(map);
         setBrackets(data.pitBrackets || []);
       }
+      if (valData.status === "success") setValidation(valData);
     } catch { showToast("Lỗi tải cấu hình", "error"); }
     finally { setLoading(false); }
   }, []);
@@ -445,6 +451,45 @@ function StatutoryTab() {
       {toast && (
         <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg font-bold text-white text-sm ${toast.type === "error" ? "bg-red-500" : "bg-green-500"}`}>
           {toast.msg}
+        </div>
+      )}
+
+      {/* ── Payroll Config Readiness Banner ── */}
+      {validation && (
+        <div className={`rounded-xl border p-4 flex items-start gap-3 ${
+          validation.valid
+            ? "bg-green-50 border-green-200"
+            : "bg-red-50 border-red-200"
+        }`}>
+          <span className={`material-symbols-outlined text-[22px] flex-shrink-0 mt-0.5 ${validation.valid ? "text-green-500" : "text-red-500"}`}>
+            {validation.valid ? "check_circle" : "error"}
+          </span>
+          <div className="flex-1">
+            {validation.valid ? (
+              <>
+                <p className="font-bold text-green-800 text-sm">Cấu hình pháp lý đầy đủ — Sẵn sàng run payroll</p>
+                <p className="text-xs text-green-700 mt-0.5">
+                  Đủ {validation.configuredCount}/{validation.requiredKeysCount} config keys · {validation.pitBracketsCount} PIT brackets đang active.
+                  Logic tính lương sẽ đọc 100% từ database, không có giá trị nào hardcode.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-red-800 text-sm">Cấu hình pháp lý chưa đầy đủ — Payroll sẽ bị block</p>
+                <ul className="text-xs text-red-700 mt-1 space-y-0.5">
+                  {(validation.issues || []).map((issue, i) => (
+                    <li key={i} className="flex items-start gap-1">
+                      <span className="material-symbols-outlined text-[12px] mt-0.5">arrow_right</span>
+                      {issue}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-red-600 mt-2 font-medium">
+                  Cập nhật các mục còn thiếu bên dưới rồi lưu trước khi chạy lương.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
 

@@ -23,6 +23,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const API = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const authH = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
+const STATUTORY_API = `${API}/api/hradmin/payroll-statutory-config`;
 
 /* ── Status config ─────────────────────────────────────────────────────────── */
 const STATUS_CONFIG = {
@@ -41,11 +42,12 @@ const statusCfg = (s) => STATUS_CONFIG[s?.toLowerCase()] || { label: s, color: "
 export default function PayrollCalculationScreen() {
   const [cycles, setCycles]         = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [gate, setGate]             = useState(null);  // gate status của cycle đang chọn
+  const [gate, setGate]             = useState(null);
+  const [configValidation, setConfigValidation] = useState(null); // { valid, issues, pitBracketsCount, configuredCount, requiredKeysCount }
   const [loadingList, setLoadingList]   = useState(true);
   const [loadingGate, setLoadingGate]   = useState(false);
-  const [actionLoading, setActionLoading] = useState("");  // "close" | "run" | "lock" | ""
-  const [toast, setToast]           = useState(null);    // { type: "success"|"error", msg }
+  const [actionLoading, setActionLoading] = useState("");
+  const [toast, setToast]           = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   /* ── 1. Load cycle list ─────────────────────────────────────────────────── */
@@ -62,14 +64,19 @@ export default function PayrollCalculationScreen() {
     }
   }, [selectedId]);
 
-  /* ── 2. Load gate status khi chọn cycle ────────────────────────────────── */
+  /* ── 2. Load gate status + config validation khi chọn cycle ─────────────── */
   const loadGate = useCallback(async (id) => {
     if (!id) return;
     setLoadingGate(true);
     try {
-      const res  = await fetch(`${API}/api/hradmin/payroll-cycles/${id}/gate-status`, { headers: authH() });
-      const data = await res.json();
-      setGate(data);
+      const [gateRes, cfgRes] = await Promise.all([
+        fetch(`${API}/api/hradmin/payroll-cycles/${id}/gate-status`, { headers: authH() }),
+        fetch(`${STATUTORY_API}/validation`, { headers: authH() }),
+      ]);
+      const gateData = await gateRes.json();
+      const cfgData  = await cfgRes.json();
+      setGate(gateData);
+      if (cfgData.status === "success") setConfigValidation(cfgData);
     } finally {
       setLoadingGate(false);
     }
@@ -256,10 +263,17 @@ export default function PayrollCalculationScreen() {
               <GateCard
                 step="02"
                 title="Run Payroll"
-                subtitle="Yêu cầu: Attendance phải được đóng (Gate 1 phải pass)"
+                subtitle="Yêu cầu: Attendance đã đóng VÀ tất cả cấu hình pháp lý đã đủ"
                 passed={selected.status === "completed" || selected.status === "locked"}
                 can={gate?.canRunPayroll}
-                blockers={gate?.canRunPayroll ? [] : ["Attendance chưa được đóng — hoàn thành Gate 1 trước"]}
+                blockers={[
+                  ...(selected.status !== "attendance_closed" && selected.status !== "completed" && selected.status !== "locked"
+                    ? ["Attendance chưa được đóng — hoàn thành Gate 1 trước"]
+                    : []),
+                  ...(configValidation && !configValidation.valid
+                    ? (configValidation.issues || [])
+                    : []),
+                ]}
                 stats={[
                   {
                     icon: "lock",
@@ -267,7 +281,18 @@ export default function PayrollCalculationScreen() {
                     value: selected.status === "attendance_closed" || selected.status === "completed" || selected.status === "locked" ? "Đã đóng" : "Chưa đóng",
                     danger: selected.status === "open",
                   },
+                  {
+                    icon: "tune",
+                    label: "Payroll Config",
+                    value: configValidation
+                      ? (configValidation.valid
+                          ? `Đủ cấu hình (${configValidation.pitBracketsCount} PIT brackets)`
+                          : `Thiếu ${(configValidation.requiredKeysCount ?? 13) - (configValidation.configuredCount ?? 0)} config key`)
+                      : "Đang kiểm tra...",
+                    danger: configValidation != null && !configValidation.valid,
+                  },
                 ]}
+                configWarning={configValidation != null && !configValidation.valid}
                 actionLabel="Run Payroll"
                 actionIcon="play_circle"
                 actionColor="bg-green-600 hover:bg-green-700"
@@ -377,7 +402,8 @@ function PipelineSteps({ status }) {
 /* Gate Card component                                                         */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 function GateCard({ step, title, subtitle, passed, can, blockers, stats, actionLabel, actionIcon,
-                    actionColor = "bg-primary hover:bg-primary/90", loading, onClick, completedAt }) {
+                    actionColor = "bg-primary hover:bg-primary/90", loading, onClick, completedAt,
+                    configWarning = false }) {
   return (
     <div className={`bg-white rounded-xl border overflow-hidden transition-all ${passed ? "border-green-200" : can ? "border-primary/30" : "border-slate-200"}`}>
       {/* Header */}
@@ -420,6 +446,17 @@ function GateCard({ step, title, subtitle, passed, can, blockers, stats, actionL
             {blockers.map((b, i) => (
               <p key={i} className="text-xs text-red-600 pl-4">• {b}</p>
             ))}
+          </div>
+        )}
+
+        {/* Config warning banner with link */}
+        {!passed && configWarning && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-start gap-3">
+            <span className="material-symbols-outlined text-amber-500 text-[18px] flex-shrink-0 mt-0.5">warning</span>
+            <div className="flex-1 text-xs text-amber-800">
+              <p className="font-bold mb-0.5">Cấu hình pháp lý chưa đầy đủ</p>
+              <p>Vào <strong>Payroll Configuration → OT &amp; Statutory</strong> để cập nhật tỷ lệ bảo hiểm, giảm trừ PIT và biểu thuế TNCN trước khi chạy lương.</p>
+            </div>
           </div>
         )}
 

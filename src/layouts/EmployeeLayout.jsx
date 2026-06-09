@@ -1,17 +1,18 @@
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import EmployeeSidebar from "../shared/sidebars/EmployeeSidebar";
 import EmployeeHeader from "../shared/headers/EmployeeHeader";
 import { NotificationProvider } from "../context/NotificationContext";
 
 export default function EmployeeLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <NotificationProvider>
       <div className="flex min-h-screen bg-background-light">
-        <div className="hidden md:block">
-          <EmployeeSidebar />
-        </div>
+        <EmployeeSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
         <main className="flex-1">
-          <EmployeeHeader />
+          <EmployeeHeader onMenuClick={() => setSidebarOpen(true)} />
           <Outlet />
         </main>
       </div>

@@ -1,19 +1,29 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchPayrollDashboard } from "../../../../utils/hrApi";
+import { fetchPayrollDashboard, fetchAllPayrollCycles } from "../../../../utils/hrApi";
 
 export default function PayrollOverviewScreen() {
   const navigate = useNavigate();
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [data, setData]               = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [cycles, setCycles]           = useState([]);
+  const [selectedCycleId, setSelectedCycleId] = useState(null);
 
   useEffect(() => {
-    fetchPayrollDashboard()
+    fetchAllPayrollCycles()
+      .then((list) => setCycles(list))
+      .catch(() => setCycles([]));
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetchPayrollDashboard(selectedCycleId)
       .then((d) => setData(d))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedCycleId]);
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -41,7 +51,15 @@ export default function PayrollOverviewScreen() {
     <div className="space-y-8">
 
       {/* ================= HEADER ================= */}
-      <Header cycleName={data?.cycleName} status={data?.status} startDate={data?.startDate} endDate={data?.endDate} />
+      <Header
+        cycleName={data?.cycleName}
+        status={data?.status}
+        startDate={data?.startDate}
+        endDate={data?.endDate}
+        cycles={cycles}
+        selectedCycleId={selectedCycleId}
+        onCycleChange={setSelectedCycleId}
+      />
 
       {/* ================= KPI CARDS ================= */}
       <KPISection kpi={kpi} />
@@ -66,7 +84,7 @@ export default function PayrollOverviewScreen() {
   /* ================= HEADER ======================== */
   /* ================================================= */
 
-  function Header({ cycleName, status, startDate, endDate }) {
+  function Header({ cycleName, status, startDate, endDate, cycles, selectedCycleId, onCycleChange }) {
     const statusColor = {
       open: "text-green-600",
       attendance_closed: "text-amber-600",
@@ -86,13 +104,31 @@ export default function PayrollOverviewScreen() {
       : "No active cycle";
 
     return (
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">{cycleName ?? "Payroll Dashboard"}</h1>
           <p className="text-xs text-slate-500 mt-1">
             {periodLabel} • Status: <span className={`font-bold ${statusColor}`}>{statusLabel}</span>
           </p>
         </div>
+        {cycles.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-slate-400 text-[18px]">date_range</span>
+            <select
+              value={selectedCycleId ?? ""}
+              onChange={(e) => onCycleChange(e.target.value ? Number(e.target.value) : null)}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-[200px]"
+            >
+              <option value="">Latest Cycle</option>
+              {cycles.map((c) => (
+                <option key={c.cycleId} value={c.cycleId}>
+                  {c.cycleName ?? `Cycle #${c.cycleId}`}
+                  {c.startDate ? ` (${c.startDate})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
     );
   }

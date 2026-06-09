@@ -77,7 +77,7 @@ export default function LeaveTab() {
     setCarryOverResult(null);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/hradmin/leave-balances/carry-over/preview?fromYear=${carryOverFromYear}&toYear=${carryOverToYear}`,
+        `${API_BASE_URL}/api/hradmin/leave-balances/carry-over/preview?fromYear=${carryOverFromYear}&toYear=${carryOverToYear}&employeeId=${emp_id}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       const data = await res.json();
@@ -101,7 +101,7 @@ export default function LeaveTab() {
     setCarryOverExecuting(true);
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/hradmin/leave-balances/carry-over/execute?fromYear=${carryOverFromYear}&toYear=${carryOverToYear}`,
+        `${API_BASE_URL}/api/hradmin/leave-balances/carry-over/execute?fromYear=${carryOverFromYear}&toYear=${carryOverToYear}&employeeId=${emp_id}`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }

@@ -87,10 +87,20 @@ export async function assignChecklist(employeeId, templateId, dueDate) {
 
 // ── Payroll Dashboard ─────────────────────────────────────────────────────
 
-export async function fetchPayrollDashboard() {
-    const res = await fetch(`${BASE_URL}/api/hradmin/payroll-cycles/dashboard`, {
+export async function fetchAllPayrollCycles() {
+    const res = await fetch(`${BASE_URL}/api/hradmin/payroll-cycles`, {
         headers: getHeaders(),
     });
+    if (!res.ok) throw new Error(`Payroll cycles fetch failed: ${res.status}`);
+    const json = await res.json();
+    return json.data ?? [];
+}
+
+export async function fetchPayrollDashboard(cycleId = null) {
+    const url = cycleId
+        ? `${BASE_URL}/api/hradmin/payroll-cycles/dashboard?cycleId=${cycleId}`
+        : `${BASE_URL}/api/hradmin/payroll-cycles/dashboard`;
+    const res = await fetch(url, { headers: getHeaders() });
     if (!res.ok) throw new Error(`Payroll dashboard fetch failed: ${res.status}`);
     return await res.json();
 }

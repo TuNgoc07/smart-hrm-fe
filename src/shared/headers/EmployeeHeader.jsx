@@ -1,22 +1,16 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
 
-export default function EmployeeHeader() {
+export default function EmployeeHeader({ onMenuClick }) {
     const navigate = useNavigate();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { unreadCount } = useNotifications();
-
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
 
     return (
         <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 sm:py-4 bg-white/80 dark:bg-[#16222e]/80 backdrop-blur-md border-b border-[#e7edf3] dark:border-slate-800">
             <div className="flex items-center gap-2 min-w-0 flex-1">
                 {/* Mobile menu button */}
-                <button 
-                    onClick={toggleMobileMenu}
+                <button
+                    onClick={onMenuClick}
                     className="md:hidden p-2 text-[#4c739a] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex-shrink-0"
                 >
                     <span className="material-symbols-outlined">menu</span>

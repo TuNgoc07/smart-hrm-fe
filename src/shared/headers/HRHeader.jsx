@@ -1,21 +1,31 @@
 import { useNavigate } from 'react-router-dom';
 import useHrAdminNotificationPolling from '../../hooks/useHrAdminNotificationPolling';
 
-export default function HRHeader() {
+export default function HRHeader({ onMenuClick }) {
     const navigate = useNavigate();
     const { unreadCount } = useHrAdminNotificationPolling("all");
 
     return (
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b px-4 sm:px-6 md:px-8 py-3 sm:py-4">
         <div className="flex justify-between items-center gap-3">
-          <div className="relative max-w-xs sm:max-w-md md:max-w-xl w-full flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              search
-            </span>
-            <input
-              className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-xl text-sm"
-              placeholder="Search employees, documents, or apps..."
-            />
+          <div className="flex items-center gap-3 flex-1">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={onMenuClick}
+              className="md:hidden p-2 hover:bg-slate-100 rounded-lg"
+            >
+              <span className="material-symbols-outlined text-slate-600">menu</span>
+            </button>
+
+            <div className="relative max-w-xs sm:max-w-md md:max-w-xl w-full">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                search
+              </span>
+              <input
+                className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-xl text-sm"
+                placeholder="Search employees, documents, or apps..."
+              />
+            </div>
           </div>
   
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">

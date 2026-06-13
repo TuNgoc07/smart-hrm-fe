@@ -6,6 +6,7 @@ import ContractTab from "./tabs/ContractTab";
 import LifecycleTab from "./tabs/LifecycleTab";
 import FilesTab from "./tabs/FilesTab";
 import LeaveTab from "./tabs/LeaveTab";
+import EditProfileModal from "./EditProfileModal";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
@@ -13,24 +14,27 @@ export default function EmployeeDetailScreen() {
   const { emp_id } = useParams();
   const [activeTab, setActiveTab] = useState("profile");
   const [employeeProfile, setEmployeeProfile] = useState({});
-  useEffect(() => async () => {
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const fetchProfile = async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      console.log("Không tìm thấy token");
-      return;
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/employee-profile/${emp_id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setEmployeeProfile(data.data?.employeeInfo || {});
+      }
+    } catch (e) {
+      console.error("Failed to load profile", e);
     }
-    const response = await fetch(`${API_BASE_URL}/api/hradmin/employee-profile/${emp_id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(res => res.json())
-      .then(res => {
-        if (res.status === 'success') {
-          setEmployeeProfile(res.data.employeeInfo)
-        }
-      })
-  }, [emp_id])
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [emp_id]);
   
   const TABS = [
     { key: "profile", label: "Profile" },
@@ -91,7 +95,9 @@ export default function EmployeeDetailScreen() {
           </div>
 
           <div className="flex gap-3">
-            <button className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-bold">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-bold">
               Edit Profile
             </button>
             <button className="px-5 py-2.5 bg-slate-100 rounded-lg text-sm font-bold flex items-center gap-1">
@@ -219,8 +225,17 @@ export default function EmployeeDetailScreen() {
         <LeaveTab />
       )}
 
-
-
+      {showEditModal && (
+        <EditProfileModal
+          empId={emp_id}
+          employeeProfile={employeeProfile}
+          onClose={() => setShowEditModal(false)}
+          onSaved={(updated) => {
+            if (updated) setEmployeeProfile(updated);
+            setShowEditModal(false);
+          }}
+        />
+      )}
 
       {/* FOOTER */}
       <div className="flex justify-between text-xs text-slate-500 pt-6">

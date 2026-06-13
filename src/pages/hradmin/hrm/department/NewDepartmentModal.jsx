@@ -30,7 +30,7 @@ export default function NewDepartmentModal({ department, onClose, onSaved }) {
   // Fetch managers list
   useEffect(() => {
     const fetchManagers = async () => {
-      const res = await fetch(`${API_BASE_URL}/api/hradmin/employees`, {
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/employees?size=1000&status=active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

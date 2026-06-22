@@ -142,6 +142,60 @@ export async function decideRequest(requestId, decision, comment) {
     return res.json();
 }
 
+// ── Workload Distribution ─────────────────────────────────────────────────────
+
+export async function fetchWorkloadDistribution(periodStart, periodEnd) {
+    const params = new URLSearchParams({ periodStart, periodEnd });
+    const res = await fetch(`${BASE_URL}/api/manager/workload-distribution?${params}`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Workload distribution fetch failed: ${res.status}`);
+    return res.json();
+}
+
+// ── Line Manager Dashboard ────────────────────────────────────────────────────
+
+export async function fetchLineManagerDashboard() {
+    const res = await fetch(`${BASE_URL}/api/manager/line-manager-dashboard`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Line manager dashboard fetch failed: ${res.status}`);
+    return res.json();
+}
+
+// ── Team Leave Balance ────────────────────────────────────────────────────────
+
+export async function fetchTeamLeaveBalance(year) {
+    const params = year ? `?year=${year}` : "";
+    const res = await fetch(`${BASE_URL}/api/manager/team-leave-balance${params}`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Team leave balance fetch failed: ${res.status}`);
+    return res.json();
+}
+
+// ── Team Calendar ─────────────────────────────────────────────────────────────
+
+export async function fetchTeamCalendar(weekStart) {
+    const params = weekStart ? `?weekStart=${weekStart}` : "";
+    const res = await fetch(`${BASE_URL}/api/manager/team-calendar${params}`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Team calendar fetch failed: ${res.status}`);
+    return res.json();
+}
+
+// ── Approval History ──────────────────────────────────────────────────────────
+
+export async function fetchApprovalHistory({ dateRange = 30, type = "all", decision = "all", search = "" } = {}) {
+    const params = new URLSearchParams({ dateRange, type, decision, search });
+    const res = await fetch(`${BASE_URL}/api/manager/approval-history?${params}`, {
+        headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error(`Approval history fetch failed: ${res.status}`);
+    return res.json();
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────────
 
 /**

@@ -99,14 +99,14 @@ export default function PayrollCalculationScreen() {
       });
       const data = await res.json();
       if (res.ok && data.status === "success") {
-        showToast("success", "✅ Attendance đã được đóng. Có thể run payroll.");
+        showToast("success", "✅ Attendance period closed. You can now run payroll.");
         await loadCycles();
         await loadGate(selectedId);
       } else {
-        showToast("error", data.message || "Không thể đóng attendance.");
+        showToast("error", data.message || "Unable to close attendance.");
       }
     } catch (e) {
-      showToast("error", "Lỗi kết nối: " + e.message);
+      showToast("error", "Connection error: " + e.message);
     } finally {
       setActionLoading("");
     }
@@ -121,14 +121,14 @@ export default function PayrollCalculationScreen() {
       });
       const data = await res.json();
       if (res.ok && data.status === "success") {
-        showToast("success", "✅ Payroll đã được tính toán thành công!");
+        showToast("success", "✅ Payroll calculated successfully!");
         await loadCycles();
         await loadGate(selectedId);
       } else {
-        showToast("error", data.message || "Không thể run payroll.");
+        showToast("error", data.message || "Unable to run payroll.");
       }
     } catch (e) {
-      showToast("error", "Lỗi kết nối: " + e.message);
+      showToast("error", "Connection error: " + e.message);
     } finally {
       setActionLoading("");
     }
@@ -147,14 +147,14 @@ export default function PayrollCalculationScreen() {
       });
       const data = await res.json();
       if (res.ok && data.status === "success") {
-        showToast("success", "✅ Payroll period đã được lock thành công!");
+        showToast("success", "✅ Payroll period locked successfully!");
         await loadCycles();
         await loadGate(selectedId);
       } else {
-        showToast("error", data.message || "Không thể lock payroll period.");
+        showToast("error", data.message || "Unable to lock payroll period.");
       }
     } catch (e) {
-      showToast("error", "Lỗi kết nối: " + e.message);
+      showToast("error", "Connection error: " + e.message);
     } finally {
       setActionLoading("");
     }
@@ -175,7 +175,7 @@ export default function PayrollCalculationScreen() {
           </div>
           <h1 className="text-2xl font-black">Payroll Calculation</h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Quản lý và kiểm soát quy trình tính lương theo 2-gate protection
+            Quản lý và kiểm soát quy trình tính lương theo 3-gate protection
           </p>
         </div>
         <button onClick={() => setCreateOpen(true)}
@@ -263,17 +263,10 @@ export default function PayrollCalculationScreen() {
               <GateCard
                 step="02"
                 title="Run Payroll"
-                subtitle="Yêu cầu: Attendance đã đóng VÀ tất cả cấu hình pháp lý đã đủ"
+                subtitle="Yêu cầu: Attendance đã đóng, cấu hình pháp lý đủ, tất cả employee có compensation plan hợp lệ"
                 passed={selected.status === "completed" || selected.status === "locked"}
                 can={gate?.canRunPayroll}
-                blockers={[
-                  ...(selected.status !== "attendance_closed" && selected.status !== "completed" && selected.status !== "locked"
-                    ? ["Attendance chưa được đóng — hoàn thành Gate 1 trước"]
-                    : []),
-                  ...(configValidation && !configValidation.valid
-                    ? (configValidation.issues || [])
-                    : []),
-                ]}
+                blockers={gate?.blockers || []}
                 stats={[
                   {
                     icon: "lock",
@@ -291,8 +284,18 @@ export default function PayrollCalculationScreen() {
                       : "Đang kiểm tra...",
                     danger: configValidation != null && !configValidation.valid,
                   },
+                  {
+                    icon: "badge",
+                    label: "Compensation Plans",
+                    value: gate == null ? "Đang kiểm tra..."
+                      : (gate.missingPlanCount ?? 0) === 0
+                        ? "Tất cả có plan"
+                        : `${gate.missingPlanCount} thiếu plan`,
+                    danger: (gate?.missingPlanCount ?? 0) > 0,
+                  },
                 ]}
                 configWarning={configValidation != null && !configValidation.valid}
+                missingPlanEmployees={(gate?.missingPlanCount ?? 0) > 0 ? (gate?.missingPlanEmployees || []) : []}
                 actionLabel="Run Payroll"
                 actionIcon="play_circle"
                 actionColor="bg-green-600 hover:bg-green-700"
@@ -403,7 +406,7 @@ function PipelineSteps({ status }) {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 function GateCard({ step, title, subtitle, passed, can, blockers, stats, actionLabel, actionIcon,
                     actionColor = "bg-primary hover:bg-primary/90", loading, onClick, completedAt,
-                    configWarning = false }) {
+                    configWarning = false, missingPlanEmployees = [] }) {
   return (
     <div className={`bg-white rounded-xl border overflow-hidden transition-all ${passed ? "border-green-200" : can ? "border-primary/30" : "border-slate-200"}`}>
       {/* Header */}
@@ -449,13 +452,38 @@ function GateCard({ step, title, subtitle, passed, can, blockers, stats, actionL
           </div>
         )}
 
-        {/* Config warning banner with link */}
+        {/* Config warning banner */}
         {!passed && configWarning && (
           <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-start gap-3">
             <span className="material-symbols-outlined text-amber-500 text-[18px] flex-shrink-0 mt-0.5">warning</span>
             <div className="flex-1 text-xs text-amber-800">
               <p className="font-bold mb-0.5">Cấu hình pháp lý chưa đầy đủ</p>
               <p>Vào <strong>Payroll Configuration → OT &amp; Statutory</strong> để cập nhật tỷ lệ bảo hiểm, giảm trừ PIT và biểu thuế TNCN trước khi chạy lương.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Compensation plan warning — danh sách employee thiếu plan */}
+        {!passed && missingPlanEmployees.length > 0 && (
+          <div className="bg-orange-50 border border-orange-300 rounded-lg p-3">
+            <div className="flex items-start gap-2 mb-2">
+              <span className="material-symbols-outlined text-orange-500 text-[18px] flex-shrink-0 mt-0.5">badge</span>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-orange-800">
+                  {missingPlanEmployees.length} employee chưa có compensation plan hợp lệ cho kỳ này
+                </p>
+                <p className="text-xs text-orange-700 mt-0.5">
+                  Vào <strong>Compensation Plan</strong> để kích hoạt hoặc tạo plan mới trước khi run payroll.
+                </p>
+              </div>
+            </div>
+            <div className="bg-white border border-orange-200 rounded-md p-2 max-h-36 overflow-y-auto space-y-1">
+              {missingPlanEmployees.map((emp, i) => (
+                <p key={i} className="text-xs text-orange-700 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[12px] text-orange-400">person</span>
+                  {emp}
+                </p>
+              ))}
             </div>
           </div>
         )}
@@ -484,17 +512,35 @@ function GateCard({ step, title, subtitle, passed, can, blockers, stats, actionL
 /* Toast                                                                       */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 function Toast({ type, msg, onClose }) {
+  const lines = (msg || "").split("\n");
+  const MAX_PREVIEW = 5;
+  const isLong = lines.length > MAX_PREVIEW;
+  const [expanded, setExpanded] = useState(false);
+  const preview = expanded ? lines : lines.slice(0, MAX_PREVIEW);
+
   return (
-    <div className={`fixed bottom-6 right-6 z-50 max-w-md rounded-xl shadow-xl p-4 flex items-start gap-3 border ${
+    <div className={`fixed bottom-6 right-6 z-50 w-[420px] max-w-[calc(100vw-3rem)] rounded-xl shadow-xl border overflow-hidden ${
       type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"
     }`}>
-      <span className="material-symbols-outlined text-[20px] flex-shrink-0">
-        {type === "success" ? "check_circle" : "error"}
-      </span>
-      <p className="text-sm flex-1 whitespace-pre-line">{msg}</p>
-      <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-        <span className="material-symbols-outlined text-[18px]">close</span>
-      </button>
+      <div className="p-4 flex items-start gap-3">
+        <span className="material-symbols-outlined text-[20px] flex-shrink-0 mt-0.5">
+          {type === "success" ? "check_circle" : "error"}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className={`text-sm whitespace-pre-line ${isLong && !expanded ? "line-clamp-5" : ""}`}>
+            {preview.join("\n")}
+          </div>
+          {isLong && (
+            <button onClick={() => setExpanded(!expanded)}
+              className="text-xs font-bold mt-1 underline opacity-70 hover:opacity-100">
+              {expanded ? "Show less" : `Show ${lines.length - MAX_PREVIEW} more line(s)`}
+            </button>
+          )}
+        </div>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+          <span className="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
     </div>
   );
 }

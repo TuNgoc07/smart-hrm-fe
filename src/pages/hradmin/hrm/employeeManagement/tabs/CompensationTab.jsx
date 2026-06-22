@@ -10,6 +10,8 @@ export default function CompensationTab() {
   const [compensationInfo, setCompensationInfo] = useState({});
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [compensationsHistory, setCompensationsHistory] = useState([]);
+  const [allPlans, setAllPlans] = useState([]);
+  const [reactivatingId, setReactivatingId] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false); // Phase 2
   const { emp_id } = useParams();
@@ -21,6 +23,15 @@ export default function CompensationTab() {
     });
     const data = await res.json();
     setCompensationInfo(data.status === 'success' ? data.data : {});
+  };
+
+  // ── Fetch tất cả plans của employee (mọi status) ────────────────────
+  const fetchAllPlans = async () => {
+    const res = await fetch(`${API_BASE_URL}/api/hradmin/employee-compensation/${emp_id}/plans`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await res.json();
+    setAllPlans(data.status === 'success' ? (data.data || []) : []);
   };
 
   // ── Fetch salary components gán cho plan hiện tại ─────────────────
@@ -44,6 +55,7 @@ export default function CompensationTab() {
   useEffect(() => {
     fetchCompensation();
     fetchHistory(); // Phase 3: load history ngay khi mount
+    fetchAllPlans();
   }, [emp_id]);
 
   useEffect(() => {
@@ -60,10 +72,36 @@ export default function CompensationTab() {
     fetchSalaryComponents(compensationInfo.planId);
   };
 
+  // Reactivate 1 plan expired/inactive
+  const handleReactivate = async (planId) => {
+    if (!confirm('Reactivate this compensation plan? The current active plan (if any) will be expired.')) return;
+    setReactivatingId(planId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/hradmin/compensation-plans/${planId}/reactivate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        await fetchCompensation();
+        await fetchAllPlans();
+        await fetchHistory();
+        if (compensationInfo.planId) fetchSalaryComponents(compensationInfo.planId);
+      } else {
+        alert(data.message || 'Failed to reactivate plan.');
+      }
+    } catch (e) {
+      alert('Connection error: ' + e.message);
+    } finally {
+      setReactivatingId(null);
+    }
+  };
+
   // Refresh sau khi edit/create compensation plan hoặc assign component
   const handleCompensationSuccess = () => {
     fetchCompensation();
     fetchHistory(); // Phase 3: cập nhật history khi thay đổi lương
+    fetchAllPlans();
     setIsEditModalOpen(false);
   };
 
@@ -147,6 +185,15 @@ export default function CompensationTab() {
           onRemove={handleRemoveComponent}
         />
       </Card>
+
+      {/* ===== ALL PLANS — Reactivate expired plans ===== */}
+      {allPlans.length > 0 && (
+        <AllPlansCard
+          plans={allPlans}
+          reactivatingId={reactivatingId}
+          onReactivate={handleReactivate}
+        />
+      )}
 
       {/* ===== COMPENSATION HISTORY — Phase 3 ===== */}
       {/* Pipeline: Mỗi lần tạo/update plan → backend ghi history → đây fetch và hiển thị */}
@@ -405,6 +452,85 @@ function CompensationHistoryRow({ history: h }) {
         {h.createdAt ? h.createdAt.substring(0, 10) : '—'}
       </td>
     </tr>
+  );
+}
+
+/**
+ * Card hiển thị toàn bộ compensation plans của employee (mọi status).
+ * Plans expired/inactive → có nút Reactivate.
+ */
+function AllPlansCard({ plans, reactivatingId, onReactivate }) {
+  const statusStyle = {
+    active:   'bg-green-100 text-green-700 border-green-200',
+    expired:  'bg-red-100 text-red-600 border-red-200',
+    inactive: 'bg-slate-100 text-slate-500 border-slate-200',
+  };
+
+  return (
+    <Card title="All Compensation Plans" icon="assignment" noPadding>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50">
+              {['Plan ID', 'Base Salary', 'Effective Date', 'End Date', 'Status', ''].map((h, i) => (
+                <th key={i} className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-400 border-b">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {plans.map((plan) => {
+              const status = (plan.status || 'unknown').toLowerCase();
+              const badgeClass = statusStyle[status] || 'bg-slate-100 text-slate-500 border-slate-200';
+              const canReactivate = status !== 'active';
+              const isLoading = reactivatingId === plan.planId;
+
+              return (
+                <tr key={plan.planId} className={`hover:bg-slate-50 ${status === 'active' ? 'bg-green-50/30' : ''}`}>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-700">#{plan.planId}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-primary">
+                    {plan.baseSalary ? Number(plan.baseSalary).toLocaleString('vi-VN') + ' VND' : '—'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{plan.effectiveDate || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {plan.endDate
+                      ? <span className="text-red-500 font-medium">{plan.endDate}</span>
+                      : <span className="text-slate-400">No expiry</span>
+                    }
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-[11px] font-bold uppercase border ${badgeClass}`}>
+                      {plan.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {canReactivate && (
+                      <button
+                        onClick={() => onReactivate(plan.planId)}
+                        disabled={isLoading}
+                        className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg transition disabled:opacity-50 ml-auto"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">
+                          {isLoading ? 'hourglass_empty' : 'refresh'}
+                        </span>
+                        {isLoading ? 'Reactivating…' : 'Reactivate'}
+                      </button>
+                    )}
+                    {!canReactivate && (
+                      <span className="flex items-center gap-1 text-xs text-green-600 font-bold justify-end">
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        Active
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 

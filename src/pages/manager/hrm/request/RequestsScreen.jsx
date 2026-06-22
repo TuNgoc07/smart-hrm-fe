@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000".replace(/\/$/, "");
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080".replace(/\/$/, "");
 
 /* ─── Config ──────────────────────────────────────────────────── */
 const PAGE_SIZE = 10;

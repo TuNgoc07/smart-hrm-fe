@@ -27,7 +27,7 @@ export default function ManagerRoutes() {
                 <Route path="/manager/team" element={<TeamOverviewScreen />} />
                 <Route path="/manager/team-attendance" element={<TeamAttendanceScreen />} />
                 <Route path="/manager/requests" element={<RequestsScreen />} />
-                <Route path="/manager/requests/:request_id" element={<RequestDetailScreen />} />
+                <Route path="/manager/request-details/:request_id" element={<RequestDetailScreen />} />
                 <Route path="/manager/approval-history" element={<ApprovalHistoryScreen />} />
                 <Route path="/manager/insights" element={<AIInsightScreen />} />
                 <Route path="/manager/notifications" element={<NotificationScreen />} />

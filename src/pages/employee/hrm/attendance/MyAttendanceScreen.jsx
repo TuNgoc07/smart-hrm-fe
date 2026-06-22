@@ -138,12 +138,8 @@ function TodayAttendanceCard({ record, loading }) {
                     {shiftEnd && <p className="text-sm text-slate-500 italic">Expected checkout: {shiftEnd}</p>}
                 </div>
             </div>
-            <div className="w-full md:w-64 h-40 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                <div className="absolute bottom-3 left-3 flex gap-2">
-                    <span className="bg-white/90 dark:bg-slate-900/90 text-[10px] px-2 py-1 rounded font-bold shadow-sm">HQ Office</span>
-                    {record?.checkin && <span className="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-[10px] px-2 py-1 rounded font-bold shadow-sm">Verified</span>}
-                </div>
+            <div className="w-full md:w-64 h-40 rounded-xl overflow-hidden relative">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAZyjBfiMvetREaPaiEsPE9oOmu-lfZQShcg&s" className="w-full h-full object-cover" alt="Employee avatar" />
             </div>
         </section>
     );

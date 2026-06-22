@@ -71,9 +71,9 @@ export default function ReviewExceptionModal({ data, onClose, onResolved }) {
 
     ? [
 
-        { key: "REVERT_TO_LEAVE", label: "Revert về Leave",      icon: "event_busy",    style: "border-amber-400 bg-amber-50 text-amber-700" },
+        { key: "REVERT_TO_LEAVE", label: "Revert to Leave",      icon: "event_busy",    style: "border-amber-400 bg-amber-50 text-amber-700" },
 
-        { key: "KEEP_PRESENT",    label: "Giữ nguyên Present",   icon: "how_to_reg",    style: "border-emerald-400 bg-emerald-50 text-emerald-700" },
+        { key: "KEEP_PRESENT",    label: "Keep Present",   icon: "how_to_reg",    style: "border-emerald-400 bg-emerald-50 text-emerald-700" },
 
       ]
 
@@ -85,21 +85,21 @@ export default function ReviewExceptionModal({ data, onClose, onResolved }) {
 
         { key: "REJECT_REQUEST",  label: "Reject explanation",   icon: "cancel",        style: "border-rose-400 bg-rose-50 text-rose-700" },
 
-        isMissingCheckout && { key: "MANUAL_CHECKOUT", label: "Nhập checkout thủ công", icon: "edit_calendar", style: "border-primary bg-blue-50 text-primary" },
+        isMissingCheckout && { key: "MANUAL_CHECKOUT", label: "Manual Checkout", icon: "edit_calendar", style: "border-primary bg-blue-50 text-primary" },
 
       ].filter(Boolean)
 
     : [
 
-        isOTType && { key: "APPROVE_OT",        label: "Xác nhận OT",           icon: "more_time",     style: "border-indigo-400 bg-indigo-50 text-indigo-700" },
+        isOTType && { key: "APPROVE_OT",        label: "OT Verification",           icon: "more_time",     style: "border-indigo-400 bg-indigo-50 text-indigo-700" },
 
-        { key: "MANUAL_CHECKOUT",               label: "Nhập checkout thủ công", icon: "edit_calendar", style: "border-primary bg-blue-50 text-primary" },
+        { key: "MANUAL_CHECKOUT",               label: "Manual Checkout", icon: "edit_calendar", style: "border-primary bg-blue-50 text-primary" },
 
-        { key: "MARK_ABSENT",                   label: "Đánh dấu vắng mặt",     icon: "person_off",    style: "border-rose-400 bg-rose-50 text-rose-700" },
+        { key: "MARK_ABSENT",                   label: "Mark Absent",     icon: "person_off",    style: "border-rose-400 bg-rose-50 text-rose-700" },
 
-        { key: "REQUEST_SUBMISSION",            label: "Yêu cầu NV giải trình",  icon: "send",          style: "border-amber-400 bg-amber-50 text-amber-700" },
+        { key: "REQUEST_SUBMISSION",            label: "Request Submission",  icon: "send",          style: "border-amber-400 bg-amber-50 text-amber-700" },
 
-        { key: "REJECT",                        label: "Từ chối exception",      icon: "block",         style: "border-slate-300 bg-slate-50 text-slate-600" },
+        { key: "REJECT",                        label: "Reject Exception",      icon: "block",         style: "border-slate-300 bg-slate-50 text-slate-600" },
 
       ].filter(Boolean);
 
@@ -161,7 +161,7 @@ export default function ReviewExceptionModal({ data, onClose, onResolved }) {
 
     } catch (err) {
 
-      alert("Không thể kết nối hệ thống. Vui lòng thử lại.");
+      alert("Cannot connect to system. Please try again.");
 
     } finally {
 
@@ -735,9 +735,9 @@ function NoExplanationBlock() {
 
         <p className="text-xs text-amber-700 mt-1 leading-relaxed">
 
-          Exception này được phát hiện tự động bởi hệ thống. HR có thể tự xử lý trực tiếp
+          This exception was automatically detected by the system. HR can process it directly
 
-          hoặc chọn "Yêu cầu NV giải trình" để đợi nhân viên phản hồi trước khi quyết định.
+          or select "Request Submission" to wait for the employee to respond before making a decision.
 
         </p>
 
@@ -763,13 +763,13 @@ function AwaitingBlock() {
 
       <div>
 
-        <p className="text-sm font-bold text-indigo-800">Đang chờ nhân viên giải trình</p>
+        <p className="text-sm font-bold text-indigo-800">Waiting for employee explanation</p>
 
         <p className="text-xs text-indigo-700 mt-1 leading-relaxed">
 
-          Thông báo đã được gửi đến nhân viên. Exception sẽ chuyển sang trạng thái
+          Notification has been sent to the employee. The exception will transition to
 
-          "Explanation Ready" khi nhân viên nộp giải trình.
+          "Explanation Ready" when the employee submits their explanation.
 
         </p>
 
@@ -807,7 +807,7 @@ function ResolvedBlock({ data }) {
 
         <p className={`text-sm font-bold ${isApproved ? "text-emerald-800" : "text-rose-800"}`}>
 
-          Exception đã được {isApproved ? "chấp nhận" : "từ chối"}
+          Exception has been {isApproved ? "approved" : "rejected"}
 
         </p>
 

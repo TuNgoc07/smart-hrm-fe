@@ -189,10 +189,10 @@ export default function WorkLocationConfigScreen() {
         leafletMapRef.current.flyTo([numLat, numLng], 17);
         placeMarkerFnRef.current?.(numLat, numLng);
       } else {
-        setSearchError("Không tìm thấy địa chỉ. Thử từ khóa khác.");
+        setSearchError("Address not found. Try a different keyword.");
       }
     } catch (_) {
-      setSearchError("Lỗi tìm kiếm. Vui lòng thử lại.");
+      setSearchError("Search error. Please try again.");
     }
     setSearching(false);
   };
@@ -245,8 +245,8 @@ export default function WorkLocationConfigScreen() {
   // ── Save ──────────────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    if (!form.locationName.trim()) { setSaveError("Tên địa điểm không được để trống."); return; }
-    if (!form.latitude || !form.longitude) { setSaveError("Vui lòng chọn tọa độ trên bản đồ."); return; }
+    if (!form.locationName.trim()) { setSaveError("Location name cannot be empty."); return; }
+    if (!form.latitude || !form.longitude) { setSaveError("Please select coordinates on the map."); return; }
 
     setSaving(true);
     setSaveError("");
@@ -266,18 +266,18 @@ export default function WorkLocationConfigScreen() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setSaveError(data.message || "Lưu thất bại."); return; }
+      if (!res.ok) { setSaveError(data.message || "Failed to save."); return; }
       closeModal();
       fetchLocations();
     } catch (_) {
-      setSaveError("Lỗi kết nối máy chủ.");
+      setSaveError("Server connection error.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeactivate = async (id) => {
-    if (!window.confirm("Vô hiệu hóa địa điểm này? Nhân viên sẽ không thể dùng nó để checkin.")) return;
+    if (!window.confirm("Deactivate this location? Employees will not be able to use it for check-in.")) return;
     try {
       await fetch(`${API_BASE}/api/hradmin/work-locations/${id}`, {
         method: "DELETE",
@@ -305,9 +305,9 @@ export default function WorkLocationConfigScreen() {
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Địa điểm làm việc</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Work Locations</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Cấu hình tọa độ văn phòng dùng cho GPS geofencing khi nhân viên checkin / checkout.
+            Configure office coordinates for GPS geofencing when employees check in / check out.
           </p>
         </div>
         <button
@@ -315,7 +315,7 @@ export default function WorkLocationConfigScreen() {
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:scale-[0.98]"
         >
           <span className="material-symbols-outlined text-base leading-none">add_location_alt</span>
-          Thêm địa điểm
+          Add Location
         </button>
       </div>
 
@@ -323,9 +323,9 @@ export default function WorkLocationConfigScreen() {
       <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
         <span className="material-symbols-outlined mt-0.5 text-blue-500">info</span>
         <div className="text-sm text-blue-700">
-          <strong>Cách hoạt động:</strong> Khi nhân viên checkin, hệ thống tính{" "}
+          <strong>How it works:</strong> When employees check in, the system calculates{" "}
           <code className="rounded bg-blue-100 px-1 font-mono text-xs">effectiveDistance = max(0, distance − accuracy)</code>.
-          Nếu nhỏ hơn <strong>bán kính geofence</strong> → hợp lệ. Địa điểm loại <strong>OFFICE</strong> được ưu tiên.
+          If it's less than the <strong>geofence radius</strong> → valid. Office locations are prioritized.
         </div>
       </div>
 
@@ -334,7 +334,7 @@ export default function WorkLocationConfigScreen() {
         <table className="w-full text-sm">
           <thead className="border-b bg-gray-50">
             <tr>
-              {["Tên địa điểm", "Loại", "Địa chỉ", "Tọa độ", "Bán kính", "Trạng thái", ""].map((h) => (
+              {["Location Name", "Location Type", "Address", "Coordinates", "Radius", "Status", ""].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500"
@@ -355,7 +355,7 @@ export default function WorkLocationConfigScreen() {
               <tr>
                 <td colSpan={7} className="py-16 text-center">
                   <span className="material-symbols-outlined mb-2 block text-4xl text-gray-300">location_off</span>
-                  <p className="text-gray-400">Chưa có địa điểm nào. Nhấn "Thêm địa điểm" để bắt đầu.</p>
+                  <p className="text-gray-400">No locations yet. Click "Add location" to get started.</p>
                 </td>
               </tr>
             ) : (
@@ -384,7 +384,7 @@ export default function WorkLocationConfigScreen() {
                           loc.isActive === 1 ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"
                         }`}
                       >
-                        {loc.isActive === 1 ? "Hoạt động" : "Vô hiệu"}
+                        {loc.isActive === 1 ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -393,21 +393,21 @@ export default function WorkLocationConfigScreen() {
                           onClick={() => openEdit(loc)}
                           className="text-xs font-medium text-blue-600 hover:text-blue-800"
                         >
-                          Sửa
+                          Edit
                         </button>
                         {loc.isActive === 1 ? (
                           <button
                             onClick={() => handleDeactivate(loc.locationId)}
                             className="text-xs font-medium text-red-500 hover:text-red-700"
                           >
-                            Vô hiệu hóa
+                            Deactivate
                           </button>
                         ) : (
                           <button
                             onClick={() => handleReactivate(loc.locationId)}
                             className="text-xs font-medium text-emerald-600 hover:text-emerald-800"
                           >
-                            Kích hoạt lại
+                            Reactivate
                           </button>
                         )}
                       </div>
@@ -430,7 +430,7 @@ export default function WorkLocationConfigScreen() {
             {/* Modal header */}
             <div className="flex items-center justify-between border-b px-6 py-4">
               <h2 className="text-lg font-bold text-gray-900">
-                {editingId ? "Chỉnh sửa địa điểm" : "Thêm địa điểm mới"}
+                {editingId ? "Edit location" : "Add new location"}
               </h2>
               <button
                 onClick={closeModal}
@@ -446,7 +446,7 @@ export default function WorkLocationConfigScreen() {
               <div className="flex w-80 flex-shrink-0 flex-col gap-4 overflow-y-auto border-r p-6">
                 {/* Location name */}
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">Tên địa điểm *</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">Location Name *</label>
                   <input
                     value={form.locationName}
                     onChange={(e) => setForm((p) => ({ ...p, locationName: e.target.value }))}
@@ -457,7 +457,7 @@ export default function WorkLocationConfigScreen() {
 
                 {/* Type */}
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">Loại địa điểm</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">Location Type</label>
                   <select
                     value={form.locationType}
                     onChange={(e) => setForm((p) => ({ ...p, locationType: e.target.value }))}
@@ -467,13 +467,13 @@ export default function WorkLocationConfigScreen() {
                     <option value="REMOTE">REMOTE — Làm từ xa</option>
                     <option value="CLIENT_SITE">CLIENT_SITE — Tại khách hàng</option>
                   </select>
-                  <p className="mt-1 text-[11px] text-gray-400">Loại OFFICE được ưu tiên cho checkin GPS</p>
+                  <p className="mt-1 text-[11px] text-gray-400">OFFICE type is prioritized for GPS check-in</p>
                 </div>
 
                 {/* Radius */}
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600">
-                    Bán kính geofence (mét)
+                    Geofence Radius (meters)
                   </label>
                   <input
                     type="number"
@@ -490,7 +490,7 @@ export default function WorkLocationConfigScreen() {
 
                 {/* Address search */}
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">Tìm kiếm địa chỉ</label>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-600">Search Address</label>
                   <div className="flex gap-2">
                     <input
                       value={searchQuery}
@@ -516,7 +516,7 @@ export default function WorkLocationConfigScreen() {
                 {/* Address (auto-filled) */}
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600">
-                    Địa chỉ <span className="font-normal text-gray-400">(tự động từ bản đồ)</span>
+                    Address <span className="font-normal text-gray-400">(auto-filled from map)</span>
                   </label>
                   <textarea
                     value={form.address}
@@ -529,7 +529,7 @@ export default function WorkLocationConfigScreen() {
 
                 {/* Coordinates display */}
                 <div className="rounded-xl bg-blue-50 p-3">
-                  <p className="mb-1 text-xs font-semibold text-blue-700">Tọa độ đã chọn</p>
+                  <p className="mb-1 text-xs font-semibold text-blue-700">Selected Coordinates</p>
                   {form.latitude && form.longitude ? (
                     <p className="font-mono text-xs text-blue-600 leading-relaxed">
                       Lat: {parseFloat(form.latitude).toFixed(6)}
@@ -537,13 +537,13 @@ export default function WorkLocationConfigScreen() {
                       Lng: {parseFloat(form.longitude).toFixed(6)}
                     </p>
                   ) : (
-                    <p className="text-xs text-blue-400 italic">Chưa chọn — click vào bản đồ</p>
+                    <p className="text-xs text-blue-400 italic">Not selected — click on the map</p>
                   )}
                 </div>
 
                 {/* Map hint */}
                 <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-700">
-                  <strong>Hướng dẫn:</strong> Tìm địa chỉ bằng ô tìm kiếm hoặc click thẳng vào bản đồ. Kéo pin để tinh chỉnh. Chỉ 1 pin duy nhất — click vị trí mới sẽ thay thế pin cũ.
+                  <strong>Guide:</strong> Find address using the search box or click directly on the map. Drag the pin to adjust. Only 1 pin allowed — clicking a new position will replace the old one.
                 </div>
 
                 {saveError && (
@@ -556,14 +556,14 @@ export default function WorkLocationConfigScreen() {
                     onClick={closeModal}
                     className="flex-1 rounded-lg border px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
                   >
-                    Hủy
+                    Cancel
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving || !form.locationName || !form.latitude || !form.longitude}
                     className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {saving ? "Đang lưu..." : editingId ? "Cập nhật" : "Tạo mới"}
+                    {saving ? "Saving..." : editingId ? "Update" : "Create"}
                   </button>
                 </div>
               </div>
@@ -581,13 +581,13 @@ export default function WorkLocationConfigScreen() {
                       <span className="material-symbols-outlined animate-spin mb-2 block text-4xl">
                         progress_activity
                       </span>
-                      <p className="text-sm">Đang tải bản đồ...</p>
+                      <p className="text-sm">Loading map...</p>
                     </div>
                   </div>
                 )}
                 <div className="absolute left-3 top-3 z-[1000] max-w-xs rounded-lg bg-white/90 px-3 py-2 text-xs text-gray-600 shadow backdrop-blur">
                   <span className="material-symbols-outlined align-middle text-sm text-blue-500">touch_app</span>{" "}
-                  Click để đặt vị trí · Kéo pin để điều chỉnh
+                  Click to set position · Drag pin to adjust
                 </div>
               </div>
             </div>

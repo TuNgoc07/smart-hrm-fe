@@ -9,6 +9,7 @@ export default function PayslipHistoryScreen() {
   const [payslips, setPayslips] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPayslip, setSelectedPayslip] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState("");
 
   // Load danh sách cycles đã locked
@@ -41,6 +42,19 @@ export default function PayslipHistoryScreen() {
       .catch(() => setPayslips([]))
       .finally(() => setLoading(false));
   }, [selectedCycleId]);
+
+  const handleViewDetail = async (payslip) => {
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`${API}/api/hradmin/payslips/${payslip.payslipId}`, { headers: authHeader() });
+      const d = await res.json();
+      setSelectedPayslip(d.status === "success" ? d.data : payslip);
+    } catch {
+      setSelectedPayslip(payslip);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const selectedCycle = cycles.find(c => c.cycleId === selectedCycleId);
   const filtered = payslips.filter(p =>
@@ -109,7 +123,7 @@ export default function PayslipHistoryScreen() {
       {loading ? (
         <div className="flex justify-center py-16 text-slate-400">Đang tải payslips...</div>
       ) : (
-        <PayslipTable data={filtered} onViewDetail={setSelectedPayslip} />
+        <PayslipTable data={filtered} onViewDetail={handleViewDetail} detailLoading={detailLoading} />
       )}
 
       {/* DETAIL MODAL */}
@@ -138,7 +152,7 @@ function SummaryCard({ label, value, highlight }) {
   );
 }
 
-function PayslipTable({ data, onViewDetail }) {
+function PayslipTable({ data, onViewDetail, detailLoading }) {
   return (
     <div className="bg-white rounded-xl border overflow-hidden">
       <table className="w-full text-sm">
@@ -160,6 +174,7 @@ function PayslipTable({ data, onViewDetail }) {
               key={index}
               payslip={p}
               onViewDetail={onViewDetail}
+              detailLoading={detailLoading}
             />
           ))}
         </tbody>
@@ -168,7 +183,7 @@ function PayslipTable({ data, onViewDetail }) {
   );
 }
 
-function PayslipRow({ payslip, onViewDetail }) {
+function PayslipRow({ payslip, onViewDetail, detailLoading }) {
   const allowanceTotal = (payslip.mealAllowance || 0) + (payslip.transportAllowance || 0) + (payslip.otherAllowances || 0) + (payslip.bonus || 0) + (payslip.commission || 0);
   const deductionTotal = (payslip.bhxhEmployee || 0) + (payslip.bhytEmployee || 0) + (payslip.bhtnEmployee || 0) + (payslip.pit || 0) + (payslip.penalty || 0) + (payslip.lwop || 0);
 
@@ -191,9 +206,10 @@ function PayslipRow({ payslip, onViewDetail }) {
       <Td right>
         <button
           onClick={() => onViewDetail(payslip)}
-          className="text-primary text-xs font-bold hover:underline"
+          disabled={detailLoading}
+          className="text-primary text-xs font-bold hover:underline disabled:opacity-50"
         >
-          View Detail
+          {detailLoading ? "Loading…" : "View Detail"}
         </button>
       </Td>
     </tr>

@@ -304,7 +304,11 @@ export default function AttendanceRecordScreen() {
           )}
 
           {adjustingRecord && (
-            <AttendanceAdjustModal data={adjustingRecord} onClose={() => setAdjustingRecord(null)} />
+            <AttendanceAdjustModal
+              data={adjustingRecord}
+              onClose={() => setAdjustingRecord(null)}
+              onSaved={() => { setAdjustingRecord(null); setRefreshKey(k => k + 1); }}
+            />
           )}
         </>
       ) : (

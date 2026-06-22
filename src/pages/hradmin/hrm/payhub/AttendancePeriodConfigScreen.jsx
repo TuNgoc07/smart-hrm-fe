@@ -88,7 +88,7 @@ export default function AttendancePeriodConfigScreen() {
                     setDescription(json.data.description || "");
                 }
             })
-            .catch(() => setError("Không thể tải cấu hình. Vui lòng thử lại."))
+            .catch(() => setError("Do not load config. Please try again."))
             .finally(() => setLoading(false));
     }, []);
 
@@ -101,7 +101,7 @@ export default function AttendancePeriodConfigScreen() {
         setSuccess("");
         const day = Number(startDay);
         if (!day || day < 1 || day > 28) {
-            setError("Vui lòng nhập ngày hợp lệ từ 1 đến 28.");
+            setError("Please enter a valid day from 1 to 28.");
             return;
         }
         setSaving(true);
@@ -116,11 +116,11 @@ export default function AttendancePeriodConfigScreen() {
             );
             const json = await res.json();
             if (!res.ok || json.status !== "success") {
-                throw new Error(json.message || "Lưu thất bại.");
+                throw new Error(json.message || "Failed to save.");
             }
             /* Cập nhật state từ response mới */
             setConfig(json.data);
-            setSuccess("Cấu hình kỳ chấm công đã được lưu thành công!");
+            setSuccess("Attendance period configuration has been saved successfully!");
         } catch (e) {
             setError(e.message);
         } finally {
@@ -137,7 +137,7 @@ export default function AttendancePeriodConfigScreen() {
                     Attendance Period Configuration
                 </h1>
                 <p className="text-sm text-slate-500 mt-1">
-                    Cấu hình ngày bắt đầu kỳ chấm công. Hệ thống sẽ tự tính kỳ cho tất cả các tháng.
+                    Configure the start day of the attendance period. The system will automatically calculate the period for all months.
                 </p>
             </div>
 
@@ -148,12 +148,12 @@ export default function AttendancePeriodConfigScreen() {
                         <span className="material-symbols-outlined text-blue-600 text-xl mt-0.5">info</span>
                         <div>
                             <p className="font-bold text-slate-900 dark:text-white text-sm">
-                                Cấu hình hiện tại: Kỳ bắt đầu ngày <span className="text-blue-600">{config.cycleStartDay}</span> hàng tháng
+                                Current configuration: Start day of the period <span className="text-blue-600">{config.cycleStartDay}</span> every month
                             </p>
                             {/* Hiển thị kỳ hiện tại auto-derived từ backend */}
                             {config.currentPeriodLabel && (
                                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                                    Kỳ hiện tại: <span className="font-semibold">{config.currentPeriodLabel}</span>
+                                    Current period: <span className="font-semibold">{config.currentPeriodLabel}</span>
                                 </p>
                             )}
                             {config.configuredBy && (
@@ -204,12 +204,12 @@ export default function AttendancePeriodConfigScreen() {
                                         className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-center text-xl font-bold px-3 py-3 focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                     <div className="text-sm text-slate-500 dark:text-slate-400">
-                                        <p>hàng tháng</p>
+                                        <p>every month</p>
                                         <p className="text-xs text-slate-400">(1 – 28)</p>
                                     </div>
                                 </div>
                                 <p className="text-xs text-slate-400 mt-1.5">
-                                    Giới hạn 28 để tránh lỗi với tháng 2 (28 ngày).
+                                    Limit to 28 to avoid errors with February (28 days).
                                 </p>
                             </div>
 
@@ -250,12 +250,12 @@ export default function AttendancePeriodConfigScreen() {
                                 {saving ? (
                                     <>
                                         <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                                        Đang lưu...
+                                        Saving...
                                     </>
                                 ) : (
                                     <>
                                         <span className="material-symbols-outlined text-[18px]">save</span>
-                                        {config ? "Cập nhật cấu hình" : "Lưu cấu hình"}
+                                        {config ? "Update configuration" : "Save configuration"}
                                     </>
                                 )}
                             </button>
@@ -267,7 +267,7 @@ export default function AttendancePeriodConfigScreen() {
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
                     <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-xl">preview</span>
-                        Xem trước kỳ chấm công
+                        Preview Attendance Period
                     </h2>
 
                     {!startDay || previewCycles.length === 0 ? (
@@ -277,7 +277,7 @@ export default function AttendancePeriodConfigScreen() {
                                 calendar_month
                             </span>
                             <p className="text-sm text-slate-400">
-                                Nhập ngày bắt đầu để xem trước kỳ chấm công
+                                Enter a start day to preview the attendance period
                             </p>
                         </div>
                     ) : (
@@ -324,22 +324,22 @@ export default function AttendancePeriodConfigScreen() {
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
                 <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm flex items-center gap-2 mb-3">
                     <span className="material-symbols-outlined text-[18px] text-slate-500">help</span>
-                    Cách hệ thống tính kỳ chấm công
+                    How the system calculates the attendance period
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-500 dark:text-slate-400">
                     <div className="space-y-1">
-                        <p className="font-bold text-slate-600 dark:text-slate-300">Ví dụ: Ngày bắt đầu = 10</p>
-                        <p>Hôm nay: 25/05/2026</p>
-                        <p className="text-primary font-semibold">→ Kỳ: 10/05 – 09/06/2026</p>
+                        <p className="font-bold text-slate-600 dark:text-slate-300">Example: Start day = 10</p>
+                        <p>Today: 25/05/2026</p>
+                        <p className="text-primary font-semibold">→ Period: 10/05 – 09/06/2026</p>
                     </div>
                     <div className="space-y-1">
-                        <p className="font-bold text-slate-600 dark:text-slate-300">Ví dụ: Ngày bắt đầu = 10</p>
-                        <p>Hôm nay: 08/05/2026</p>
-                        <p className="text-primary font-semibold">→ Kỳ: 10/04 – 09/05/2026</p>
+                        <p className="font-bold text-slate-600 dark:text-slate-300">Example: Start day = 10</p>
+                        <p>Today: 08/05/2026</p>
+                        <p className="text-primary font-semibold">→ Period: 10/04 – 09/05/2026</p>
                     </div>
                     <div className="space-y-1">
-                        <p className="font-bold text-slate-600 dark:text-slate-300">Fallback tự động</p>
-                        <p>Nếu chưa có config, hệ thống tạm dùng tháng lịch thông thường.</p>
+                        <p className="font-bold text-slate-600 dark:text-slate-300">Automatic fallback</p>
+                        <p>If no config is set, the system will use the default calendar month.</p>
                     </div>
                 </div>
             </div>

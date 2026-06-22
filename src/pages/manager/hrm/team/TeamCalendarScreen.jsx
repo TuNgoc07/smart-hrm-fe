@@ -1,18 +1,101 @@
-import React from "react"
+import React, { useState, useEffect, useCallback } from "react";
+import { fetchTeamCalendar } from "../../../../utils/managerApi";
+
+function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    return d.toISOString().split("T")[0];
+}
+
+function formatWeekRange(weekStart, weekEnd) {
+    if (!weekStart || !weekEnd) return "";
+    const s = new Date(weekStart + "T00:00:00");
+    const e = new Date(weekEnd + "T00:00:00");
+    const opts = { month: "short", day: "numeric" };
+    if (s.getFullYear() !== e.getFullYear())
+        return `${s.toLocaleDateString("en-US", { ...opts, year: "numeric" })} – ${e.toLocaleDateString("en-US", { ...opts, year: "numeric" })}`;
+    return `${s.toLocaleDateString("en-US", opts)} – ${e.toLocaleDateString("en-US", { ...opts, year: "numeric" })}`;
+}
 
 export default function TeamCalendarScreen() {
+    const [weekStart, setWeekStart] = useState(getMonday(new Date()));
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [filterStatus, setFilterStatus] = useState("ALL");
+
+    const load = useCallback(async (ws) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await fetchTeamCalendar(ws);
+            setData(result);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { load(weekStart); }, [weekStart, load]);
+
+    const goToPrevWeek = () => {
+        const d = new Date(weekStart + "T00:00:00");
+        d.setDate(d.getDate() - 7);
+        setWeekStart(d.toISOString().split("T")[0]);
+    };
+    const goToNextWeek = () => {
+        const d = new Date(weekStart + "T00:00:00");
+        d.setDate(d.getDate() + 7);
+        setWeekStart(d.toISOString().split("T")[0]);
+    };
+    const goToToday = () => setWeekStart(getMonday(new Date()));
+
+    const weekRange = data ? formatWeekRange(data.weekStart, data.weekEnd) : "";
+
+    const filteredMembers = data?.members?.filter(m => {
+        if (filterStatus === "ALL") return true;
+        return m.days.some(d => d.status === filterStatus);
+    }) ?? [];
+
     return (
         <div className="flex flex-col min-h-screen">
             <div className="flex-1 overflow-y-auto flex flex-col gap-6">
                 <CalendarHeader />
-                <div className="grid xl:grid-cols-12 flex items-center justify-between ">
-                    <CalendarToolbar />
-                    <CalendarFilter />
+                <div className="grid xl:grid-cols-12 flex items-center justify-between">
+                    <CalendarToolbar
+                        weekRange={weekRange}
+                        onPrev={goToPrevWeek}
+                        onNext={goToNextWeek}
+                        onToday={goToToday}
+                    />
+                    <CalendarFilter activeFilter={filterStatus} onFilter={setFilterStatus} />
                 </div>
-                <CalendarTable />
-                <CalendarFooter />
-            </div>
 
+                {loading && (
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-[#e7edf3] dark:border-slate-800 p-12 flex items-center justify-center">
+                        <span className="material-symbols-outlined animate-spin text-primary text-3xl mr-3">progress_activity</span>
+                        <span className="text-[#4c739a]">Loading calendar...</span>
+                    </div>
+                )}
+
+                {error && !loading && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-6 text-red-700 dark:text-red-400 flex items-center gap-3">
+                        <span className="material-symbols-outlined">error</span>
+                        <span>Failed to load calendar: {error}</span>
+                        <button onClick={() => load(weekStart)} className="ml-auto text-sm underline">Retry</button>
+                    </div>
+                )}
+
+                {!loading && !error && data && (
+                    <>
+                        <CalendarTable days={data.days} members={filteredMembers} />
+                        <CalendarFooter />
+                    </>
+                )}
+            </div>
         </div>
     );
 }
@@ -25,39 +108,30 @@ function CalendarHeader() {
                     Team Calendar
                 </h4>
                 <p className="text-[#4c739a] dark:text-slate-400 font-medium mt-1">
-                    Product Design Team
+                    Weekly availability overview
                 </p>
-            </div>
-
-            <div className="flex h-11 w-64 items-center bg-[#e7edf3] dark:bg-slate-800 p-1 rounded-full">
-                <button className="flex-1 h-full bg-white dark:bg-slate-700 shadow-sm rounded-full text-sm font-bold">
-                    Week
-                </button>
-                <button className="flex-1 h-full rounded-full text-sm font-medium text-[#4c739a]">
-                    Month
-                </button>
             </div>
         </div>
     );
 }
 
-function CalendarToolbar() {
+function CalendarToolbar({ weekRange, onPrev, onNext, onToday }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4 xl:col-span-6">
             <div className="flex items-center gap-3">
                 <div className="flex items-center bg-white dark:bg-slate-800 rounded-full border shadow-sm">
-                    <button className="p-2 rounded-full">
+                    <button onClick={onPrev} className="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                         <span className="material-symbols-outlined flex items-center">chevron_left</span>
                     </button>
-                    <button className="px-6 py-1 text-sm font-bold border-x ">
-                        Oct 23 – Oct 29, 2023
-                    </button>
-                    <button className="p-2 rounded-full">
+                    <span className="px-6 py-1 text-sm font-bold border-x dark:border-slate-700 min-w-[200px] text-center">
+                        {weekRange}
+                    </span>
+                    <button onClick={onNext} className="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                         <span className="material-symbols-outlined flex items-center">chevron_right</span>
                     </button>
                 </div>
 
-                <button className="px-6 py-2.5 bg-white border rounded-full text-sm font-bold shadow-sm">
+                <button onClick={onToday} className="px-6 py-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-full text-sm font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                     Today
                 </button>
             </div>
@@ -65,176 +139,126 @@ function CalendarToolbar() {
     );
 }
 
-function CalendarFilter() {
+function CalendarFilter({ activeFilter, onFilter }) {
+    const filters = [
+        { key: "ALL", label: "All", activeClass: "bg-[#0d141b] dark:bg-white text-white dark:text-[#0d141b]", inactiveClass: "bg-white dark:bg-slate-800 border dark:border-slate-700 text-[#0d141b] dark:text-white" },
+        { key: "LEAVE", label: "Leave", activeClass: "bg-blue-100 text-primary border border-primary/30", inactiveClass: "bg-white dark:bg-slate-800 text-[#4c739a] border dark:border-slate-700" },
+        { key: "REMOTE", label: "Remote", activeClass: "bg-yellow-100 text-yellow-700 border border-yellow-300", inactiveClass: "bg-white dark:bg-slate-800 text-[#4c739a] border dark:border-slate-700" },
+        { key: "ONSITE", label: "Onsite", activeClass: "bg-green-100 text-green-700 border border-green-300", inactiveClass: "bg-white dark:bg-slate-800 text-[#4c739a] border dark:border-slate-700" },
+    ];
     return (
-        <div className="flex items-center gap-2  xl:col-span-6 justify-end">
+        <div className="flex items-center gap-2 xl:col-span-6 justify-end">
             <span className="text-xs font-bold text-[#4c739a] uppercase tracking-wider mr-2">Filter by:</span>
-            <button className="px-5 py-2 bg-[#0d141b] dark:bg-white text-white dark:text-[#0d141b] rounded-full text-xs font-bold">All</button>
-            <button className="px-5 py-2 bg-blue-50 dark:bg-primary/20 text-primary border border-primary/20 rounded-full text-xs font-bold flex items-center gap-2">
-                <span className="size-2 rounded-full flex items-center">&bull;</span> Leave
-            </button>
-            <button className="px-5 py-2 bg-yellow-50 dark:bg-yellow-400/10 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-400/20 rounded-full text-xs font-bold flex items-center gap-2">
-                <span className="size-2 rounded-full flex items-center">&bull;</span> Remote
-            </button>
-            <button className="px-5 py-2 bg-green-50 dark:bg-green-400/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-400/20 rounded-full text-xs font-bold flex items-center gap-2">
-                <span className="size-2 rounded-full flex items-center">&bull;</span> Onsite
-            </button>
-        </div>
-    );
-}
-
-function CalendarRow({ member }) {
-    const getStatusClass = (status) => {
-        switch (status) {
-            case "ONSITE":
-                return "text-green-700 dark:text-green-400";
-            case "REMOTE":
-                return "text-yellow-700 dark:text-yellow-400";
-            case "LEAVE":
-                return "text-blue-700 dark:text-blue-400";
-            case "HOLIDAY":
-                return "text-purple-700 dark:text-purple-400";
-            default:
-                return "";
-        }
-    };
-
-    const getWeekendClass = (index) => {
-        return index >= 5 ? "bg-slate-100/30 dark:bg-slate-800/80" : "";
-    };
-
-    return (
-        <div className="grid grid-cols-8 border-b border-[#e7edf3] dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-            <div className="p-4 border-r border-[#e7edf3] dark:border-slate-800 flex items-center gap-3">
-                <div
-                    className="size-10 rounded-full bg-cover bg-center border-2 border-white shadow-sm"
-                    style={{ backgroundImage: `url(${member.avatar})` }}
-                ></div>
-                <span className="text-sm dark:text-white">
-                    {member.name}
-                </span>
-            </div>
-
-            {member.week.map((status, index) => (
-                <div key={index} className={`p-2 flex items-center justify-center ${getWeekendClass(index)}`}>
-                    {status && (
-                        <span className={`text-[11px] font-medium tracking-wide ${getStatusClass(status)}`}>
-                            {status}
-                        </span>
-                    )}
-                </div>
+            {filters.map(f => (
+                <button
+                    key={f.key}
+                    onClick={() => onFilter(f.key)}
+                    className={`px-5 py-2 rounded-full text-xs font-bold transition-colors ${activeFilter === f.key ? f.activeClass : f.inactiveClass}`}
+                >
+                    {f.label}
+                </button>
             ))}
         </div>
     );
 }
 
-function CalendarTable() {
-    const members = [
-        {
-            name: "John Doe",
-            avatar:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuC7Fwj5kzylnNIduyJ9QSYTHLeMCu3QiVIyKwAMbKwPsPiJmaXwDfqgW6lwZzDitpmgz-D-_zetScMTT-bwbP2lqOAnBfZ-B42tl5gBNvHkAQSwnZ5Q83aWsAqFZK7D1jZbOHDdw2CNPKYoc-hR7nDvz2mxmfn7r8JSM7XBHhfGJ69f1Q-3oR9Anxqvq99jdehLPCkp3kunlQAAX3bF7KJJFzZAXKgcbBmd9UwQL6gLGbSNizGrGFKuqm1GuntiqLB7hLkyzT5g6jA",
-            week: ["ONSITE", "ONSITE", "REMOTE", "REMOTE", "ONSITE", "", ""],
-        },
-        {
-            name: "Sarah Smith",
-            avatar:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuCZYCQ18ZB6aFd0Uxv60ItT4ck1qPNWis_QXfSA8frCs8zUfoSzH8LXhCNsl9cZw5qusLQzl2Ik5TqH2SlLUEhtNueyfuoNxcYmMabcToAXe7DnkTFOgXmfQxByxEr9YI8uZirLWTtXkF2L9Bza-KEF_t_5U4UnJszJJNN1CApNnmJe81-bglfaQEneLIfuXjVJTT0cRBwno7dH6H4TJQrpKj7qrSB37JySqA3XrQk7O4PqQNyjoGJ9T3dv2Ph8JhVoMsLFY0DKXlw",
-            week: ["LEAVE", "LEAVE", "ONSITE", "ONSITE", "REMOTE", "", ""],
-        },
-        {
-            name: "Alex Chen",
-            avatar:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuDETyFSZnO8WW1OlSAgLJgkIbZrcyuvsz1i7SPWmzX5rsysrF2L0p8-7t-Bfj9VchlV60s2x128A-2cnKcBgXFcxnjNq9mw3Yx0SUuAzpm3DRifNpWVVX6qMiOcG-3ZdGZspNg1RAT2-55zJ20DXhayL0aH5csqRK7K8l1x24CNLBuWr4dm9tSsgyx6XR0tPvv3xAUDjy5JvHDXGld9rLQ4rlXTy-Rjxabb3xyf_VCWVrdZ5c8uZd92gP8E8AcgebdaCK-4s4vUzQ8",
-            week: ["ONSITE", "ONSITE", "ONSITE", "HOLIDAY", "HOLIDAY", "", ""],
-        },
-        {
-            name: "Maria Garcia",
-            avatar:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuBaN-r6UeH0EFt7gMKYjdl-tRxVeIQaTlIfplYaWl_H1p5l99kNnRrP7X6_H5cRj9xSbJHCp28GPFiP3abY_RPKs8cpgv2StrTEN_UDVvdYi6T7SnTCusP_rQh9l2Kfy9Lu-YN90y6OrwlbPhnGK7H0a33aAX1tQzL98P-zqpY2rPwCqgKPOOXVU040FXjHNcYzJn_Mx4SAAX1WwatTQ-ssM9vWJxYJFQDz5O6nqGn4oOe-LWX9XdLnn6Nb_Bp4qwiRkb8BlOLKABY",
-            week: ["REMOTE", "REMOTE", "REMOTE", "ONSITE", "ONSITE", "", ""],
-        },
-    ];
+const STATUS_CONFIG = {
+    ONSITE:  { label: "ONSITE",  textClass: "text-green-700 dark:text-green-400",  bgClass: "bg-green-50 dark:bg-green-900/20" },
+    REMOTE:  { label: "REMOTE",  textClass: "text-yellow-700 dark:text-yellow-400", bgClass: "bg-yellow-50 dark:bg-yellow-900/20" },
+    LEAVE:   { label: "LEAVE",   textClass: "text-blue-700 dark:text-blue-400",    bgClass: "bg-blue-50 dark:bg-blue-900/20" },
+    ABSENT:  { label: "ABSENT",  textClass: "text-red-500 dark:text-red-400",      bgClass: "bg-red-50 dark:bg-red-900/20" },
+    WEEKEND: { label: "",        textClass: "",                                     bgClass: "" },
+};
+
+function CalendarRow({ member, days }) {
+    return (
+        <div className="grid grid-cols-8 border-b border-[#e7edf3] dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+            <div className="p-4 border-r border-[#e7edf3] dark:border-slate-800 flex items-center gap-3">
+                {member.avatarUrl ? (
+                    <div
+                        className="size-10 rounded-full bg-cover bg-center border-2 border-white shadow-sm flex-shrink-0"
+                        style={{ backgroundImage: `url(${member.avatarUrl})` }}
+                    />
+                ) : (
+                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-bold text-sm">
+                        {member.fullName?.charAt(0)}
+                    </div>
+                )}
+                <span className="text-sm font-medium dark:text-white truncate">{member.fullName}</span>
+            </div>
+
+            {(member.days ?? []).map((dayCell, index) => {
+                const cfg = STATUS_CONFIG[dayCell.status] ?? {};
+                const isWeekend = dayCell.status === "WEEKEND";
+                return (
+                    <div key={index} className={`p-2 flex items-center justify-center ${isWeekend ? "bg-slate-100/30 dark:bg-slate-800/80" : ""}`}>
+                        {dayCell.status && !isWeekend && (
+                            <span className={`text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full ${cfg.textClass} ${cfg.bgClass}`}>
+                                {cfg.label}
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function CalendarTable({ days = [], members = [] }) {
+    const today = new Date().toISOString().split("T")[0];
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-[#e7edf3] dark:border-slate-800 shadow-xl overflow-hidden flex flex-col">
             <div className="grid grid-cols-8 border-b border-[#e7edf3] dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-800/50">
                 <div className="p-4 border-r border-[#e7edf3] dark:border-slate-800 font-bold text-xs uppercase text-[#4c739a]">Team Member</div>
-                <div className="p-4 text-center">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Mon</span>
-                    <span className="block text-xl font-extrabold dark:text-white">23</span>
-                </div>
-                <div className="p-4 text-center">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Tue</span>
-                    <span className="block text-xl font-extrabold dark:text-white">24</span>
-                </div>
-                <div className="p-4 text-center">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Wed</span>
-                    <span className="block text-xl font-extrabold dark:text-white">25</span>
-                </div>
-                <div className="p-4 text-center">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Thu</span>
-                    <span className="block text-xl font-extrabold dark:text-white">26</span>
-                </div>
-                <div className="p-4 text-center">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Fri</span>
-                    <span className="block text-xl font-extrabold dark:text-white">27</span>
-                </div>
-                <div className="p-4 text-center bg-slate-100/30 dark:bg-slate-800/80">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Sat</span>
-                    <span className="block text-xl font-extrabold dark:text-white opacity-50">28</span>
-                </div>
-                <div className="p-4 text-center bg-slate-100/30 dark:bg-slate-800/80">
-                    <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">Sun</span>
-                    <span className="block text-xl font-extrabold dark:text-white opacity-50">29</span>
-                </div>
+                {days.map((day) => (
+                    <div
+                        key={day.date}
+                        className={`p-4 text-center ${day.weekend ? "bg-slate-100/30 dark:bg-slate-800/80" : ""} ${day.date === today ? "bg-primary/5 border-b-2 border-primary" : ""}`}
+                    >
+                        <span className="block text-xs font-bold text-[#4c739a] uppercase tracking-tighter">{day.dayLabel}</span>
+                        <span className={`block text-xl font-extrabold ${day.weekend ? "opacity-50" : ""} ${day.date === today ? "text-primary" : "dark:text-white"}`}>
+                            {day.dayNumber}
+                        </span>
+                    </div>
+                ))}
             </div>
-            {members.map((member) => (
-                <CalendarRow key={member.name} member={member} />
-            ))}
+            {members.length === 0 ? (
+                <div className="p-12 text-center text-[#4c739a]">
+                    <span className="material-symbols-outlined text-4xl mb-2 block">calendar_month</span>
+                    No team members found
+                </div>
+            ) : (
+                members.map((member) => (
+                    <CalendarRow key={member.employeeId} member={member} days={days} />
+                ))
+            )}
         </div>
     );
 }
 
 function CalendarFooter() {
-    const status = ["ONSITE", "REMOTE", "LEAVE", "HOLIDAY"];
-    const getStatusClass = (status) => {
-        switch (status) {
-            case "ONSITE":
-                return "text-green-700 dark:text-green-400";
-            case "REMOTE":
-                return "text-yellow-700 dark:text-yellow-400";
-            case "LEAVE":
-                return "text-blue-700 dark:text-blue-400";
-            case "HOLIDAY":
-                return "text-purple-700 dark:text-purple-400";
-            default:
-                return "";
-        }
-    };
+    const legend = [
+        { key: "ONSITE",  label: "Onsite",  textClass: "text-green-700 dark:text-green-400",  dotClass: "bg-green-500" },
+        { key: "REMOTE",  label: "Remote",  textClass: "text-yellow-700 dark:text-yellow-400", dotClass: "bg-yellow-500" },
+        { key: "LEAVE",   label: "Leave",   textClass: "text-blue-700 dark:text-blue-400",    dotClass: "bg-blue-500" },
+        { key: "ABSENT",  label: "Absent",  textClass: "text-red-600 dark:text-red-400",      dotClass: "bg-red-500" },
+    ];
     return (
-        <footer className="fixed bottom-0 mt-auto dark:bg-slate-900  px-8 py-4 flex items-center justify-between gap-10">
-            <div className="flex items-center gap-8">
-                <span className="text-xs font-bold uppercase">
-                    Availability Guide:
-                </span>
-                {status.map((st) => (
-                    <span className={`text-xs font-bold ${getStatusClass(st)}`}>{st}</span>
+        <div className="mt-2 px-4 py-3 flex items-center justify-between gap-10 flex-wrap">
+            <div className="flex items-center gap-6 flex-wrap">
+                <span className="text-xs font-bold uppercase text-[#4c739a]">Legend:</span>
+                {legend.map(l => (
+                    <span key={l.key} className={`flex items-center gap-1.5 text-xs font-bold ${l.textClass}`}>
+                        <span className={`size-2.5 rounded-full ${l.dotClass}`} />
+                        {l.label}
+                    </span>
                 ))}
             </div>
-
-            <div className="flex items-center gap-4 text-[10px] font-medium">
-                <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">update</span>
-                    Auto-refreshes every 5 mins
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">
-                        help_outline
-                    </span>
-                    Help Center
-                </div>
+            <div className="flex items-center gap-1 text-[10px] font-medium text-[#4c739a]">
+                <span className="material-symbols-outlined text-sm">update</span>
+                Data refreshes on week change
             </div>
-        </footer>
+        </div>
     );
 }

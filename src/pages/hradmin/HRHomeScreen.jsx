@@ -21,38 +21,15 @@ const quickAccessItems = [
   { label: "Face Registration", icon: "post_add", path: "/face-registration" },
 ];
 
-const recentActivityItems = [
-  {
-    title: "Onboarding Completed",
-    desc: "5 new hires finalized their profiles",
-    time: "15 minutes ago",
-    color: "bg-green-500",
-  },
-  {
-    title: "New Candidate Applied",
-    desc: "Applied for UI Designer role",
-    time: "2 hours ago",
-    color: "bg-blue-500",
-  },
-  {
-    title: "Leave Approved",
-    desc: "Manager approved Mark's request",
-    time: "Yesterday",
-    color: "bg-amber-500",
-  },
-  {
-    title: "System Maintenance",
-    desc: "Payroll module updated successfully",
-    time: "Yesterday",
-    color: "bg-slate-400",
-  },
-  {
-    title: "Contract Alert",
-    desc: "David's contract expires in 7 days",
-    time: "Oct 21, 2023",
-    color: "bg-red-500",
-  },
-];
+const getActivityColor = (activityType) => {
+  switch (activityType?.toLowerCase()) {
+    case "submitted": return "bg-green-500";
+    case "approved": return "bg-blue-500";
+    case "rejected": return "bg-red-500";
+    case "cancelled": return "bg-amber-500";
+    default: return "bg-slate-400";
+  }
+};
 
 function StatCard({ title, value, icon, percent }) {
   return (
@@ -134,13 +111,13 @@ function RecentActivityItem({ item }) {
   return (
     <div className="relative">
       <div
-        className={`absolute -left-[22px] top-1 w-3 h-3 rounded-full ${item.color}`}
+        className={`absolute -left-[22px] top-1 w-3 h-3 rounded-full ${getActivityColor(item.activityType)}`}
       ></div>
 
       <p className="font-bold text-sm">{item.title}</p>
-      <p className="text-xs text-slate-500">{item.desc}</p>
+      <p className="text-xs text-slate-500">{item.meta}</p>
       <span className="text-[10px] uppercase font-bold text-slate-400">
-        {item.time}
+        {item.timestamp}
       </span>
     </div>
   );
@@ -297,7 +274,9 @@ function QuickAccessSection({ onClick }) {
   );
 }
 
-function RecentActivitySection() {
+function RecentActivitySection({ recentActivities }) {
+  const activities = recentActivities || [];
+
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
       <h2 className="text-xl font-bold mb-6">Recent Activity</h2>
@@ -305,9 +284,13 @@ function RecentActivitySection() {
       <div className="relative pl-6 space-y-8">
         <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-slate-100"></div>
 
-        {recentActivityItems.map((item, i) => (
-          <RecentActivityItem key={i} item={item} />
-        ))}
+        {activities.length > 0 ? (
+          activities.map((item, i) => (
+            <RecentActivityItem key={i} item={item} />
+          ))
+        ) : (
+          <p className="text-sm text-slate-500">No recent activities</p>
+        )}
       </div>
 
       <button className="mt-6 w-full py-2 rounded-xl bg-slate-50 text-xs font-bold text-slate-500 hover:text-primary">
@@ -378,7 +361,7 @@ export default function HRHomeScreen() {
           <QuickAccessSection onClick={navigateTo} />
         </div>
         {/* RIGHT */}
-        <RecentActivitySection />
+        <RecentActivitySection recentActivities={stats?.recentActivities} />
       </section>
       {checkinModalOpen && <CheckinModal onClose={() => setCheckinModalOpen(false)} />}
       {checkoutModalOpen && <CheckoutModal onClose={() => setCheckoutModalOpen(false)} />}

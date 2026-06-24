@@ -317,9 +317,14 @@ export default function CheckinModal({ onClose }) {
 
             const data = await res.json();
             return {
-                success:    res.ok,
-                message:    data.message || (res.ok ? "Checkin thành công" : "Checkin thất bại"),
-                gpsWarning: data.gpsWarning || null,
+                success:       res.ok,
+                message:       data.message || (res.ok ? "Checkin thành công" : "Checkin thất bại"),
+                checkinStatus: data.data?.status        || null,
+                faceMatchScore: data.data?.faceMatchScore ?? null,
+                livenessScore:  data.data?.livenessScore  ?? null,
+                lateMinutes:    data.data?.lateMinutes    ?? null,
+                checkinTime:    data.data?.checkinTime    || null,
+                gpsWarning:     data.data?.gpsWarning     || null,
                 data,
             };
         } catch (err) {
@@ -535,7 +540,7 @@ function FaceCheckinModal({ onClose, onSuccess, sendCheckin }) {
     const [scanProgress,  setScanProgress]  = useState(0);
     const [scanComplete,  setScanComplete]  = useState(false);
     const [isProcessing,  setIsProcessing]  = useState(false);
-    const [errorMessage,  setErrorMessage]  = useState(null);
+    const [checkinResult, setCheckinResult] = useState(null);
     const [gpsWarning,    setGpsWarning]    = useState(null);
     const videoRef  = useRef(null);
     const streamRef = useRef(null);
@@ -612,12 +617,12 @@ function FaceCheckinModal({ onClose, onSuccess, sendCheckin }) {
 
     const handleConfirm = async () => {
         setIsProcessing(true);
-        setErrorMessage(null);
+        setCheckinResult(null);
         try {
             const frames = await captureFrames(3, 400);
 
             if (frames.length === 0) {
-                setErrorMessage("Không chụp được ảnh. Vui lòng thử lại.");
+                setCheckinResult({ checkinStatus: "FAILED", message: "Không chụp được ảnh. Vui lòng thử lại." });
                 return;
             }
 
@@ -628,10 +633,10 @@ function FaceCheckinModal({ onClose, onSuccess, sendCheckin }) {
             if (result.success) {
                 setTimeout(() => { stopCamera(); onSuccess(); }, 1500);
             } else {
-                setErrorMessage(result.message);
+                setCheckinResult(result);
             }
         } catch (e) {
-            setErrorMessage("Lỗi hệ thống: " + e.message);
+            setCheckinResult({ checkinStatus: "FAILED", message: "Lỗi hệ thống: " + e.message });
         } finally {
             setIsProcessing(false);
         }
@@ -698,12 +703,7 @@ function FaceCheckinModal({ onClose, onSuccess, sendCheckin }) {
                         </div>
                     )}
 
-                    {errorMessage && (
-                        <div className="bg-red-50 border border-red-100 rounded-lg p-3 flex items-start gap-2">
-                            <span className="material-symbols-outlined text-red-500 text-sm flex-shrink-0 mt-0.5">error</span>
-                            <p className="text-xs text-red-700">{errorMessage}</p>
-                        </div>
-                    )}
+                    {checkinResult && <CheckinStatusBanner result={checkinResult} />}
 
                     <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
                         <div className="flex items-start gap-3">
@@ -735,6 +735,94 @@ function FaceCheckinModal({ onClose, onSuccess, sendCheckin }) {
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CheckinStatusBanner — hiển thị lý do thất bại từ backend
+// ─────────────────────────────────────────────────────────────────────────────
+const CHECKIN_STATUS_CONFIG = {
+    FACE_NOT_DETECTED: {
+        icon:  "face_retouching_off",
+        color: "red",
+        title: "Không phát hiện khuôn mặt",
+        hint:  "Di chuyển vào vùng sáng hơn, nhìn thẳng vào camera và thử lại.",
+    },
+    FACE_NOT_REGISTERED: {
+        icon:  "person_off",
+        color: "orange",
+        title: "Chưa đăng ký khuôn mặt",
+        hint:  "Liên hệ HR để đăng ký nhận diện khuôn mặt trước khi checkin.",
+    },
+    FACE_NOT_MATCH: {
+        icon:  "face_unlock",
+        color: "red",
+        title: "Khuôn mặt không khớp",
+        hint:  "Bỏ kính/khẩu trang, đảm bảo ánh sáng đủ và nhìn thẳng vào camera.",
+    },
+    SPOOF_SUSPECTED: {
+        icon:  "security",
+        color: "red",
+        title: "Phát hiện giả mạo (liveness)",
+        hint:  "Hệ thống phát hiện ảnh/video giả. Vui lòng dùng khuôn mặt thật trước camera.",
+    },
+    OUTSIDE_GEOFENCE: {
+        icon:  "location_off",
+        color: "red",
+        title: "Ngoài phạm vi văn phòng",
+        hint:  "Di chuyển vào khu vực làm việc được phép rồi thử lại.",
+    },
+    FAILED: {
+        icon:  "error",
+        color: "red",
+        title: null,
+        hint:  null,
+    },
+};
+
+const COLOR_CLASSES = {
+    red:    { bg: "bg-red-50",    border: "border-red-100",    icon: "text-red-500",    title: "text-red-800",    body: "text-red-700"    },
+    orange: { bg: "bg-orange-50", border: "border-orange-100", icon: "text-orange-500", title: "text-orange-800", body: "text-orange-700" },
+};
+
+function CheckinStatusBanner({ result }) {
+    const { checkinStatus, message, faceMatchScore, livenessScore } = result;
+    const cfg   = CHECKIN_STATUS_CONFIG[checkinStatus] || CHECKIN_STATUS_CONFIG.FAILED;
+    const cls   = COLOR_CLASSES[cfg.color] || COLOR_CLASSES.red;
+    const title = cfg.title || message;
+
+    return (
+        <div className={`${cls.bg} border ${cls.border} rounded-lg p-3 space-y-2`}>
+            <div className="flex items-start gap-2">
+                <span className={`material-symbols-outlined text-base flex-shrink-0 mt-0.5 ${cls.icon}`}>{cfg.icon}</span>
+                <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${cls.title}`}>{title}</p>
+                    {cfg.title && message && message !== title && (
+                        <p className={`text-xs mt-0.5 ${cls.body}`}>{message}</p>
+                    )}
+                    {cfg.hint && (
+                        <p className={`text-xs mt-1 ${cls.body} opacity-80`}>{cfg.hint}</p>
+                    )}
+                </div>
+            </div>
+
+            {(faceMatchScore != null || livenessScore != null) && (
+                <div className={`flex gap-4 pt-1 border-t ${cls.border}`}>
+                    {faceMatchScore != null && (
+                        <div className="text-xs">
+                            <span className={`${cls.body} opacity-70`}>Độ khớp khuôn mặt: </span>
+                            <span className={`font-bold ${cls.title}`}>{(faceMatchScore * 100).toFixed(0)}%</span>
+                        </div>
+                    )}
+                    {livenessScore != null && (
+                        <div className="text-xs">
+                            <span className={`${cls.body} opacity-70`}>Liveness: </span>
+                            <span className={`font-bold ${cls.title}`}>{(livenessScore * 100).toFixed(0)}%</span>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

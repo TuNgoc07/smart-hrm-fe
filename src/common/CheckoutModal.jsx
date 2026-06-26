@@ -164,6 +164,7 @@ export default function CheckoutModal({
   const [autoCountdown, setAutoCountdown] = useState(5);
   const [isAutoCounting, setIsAutoCounting] = useState(false);
   const [checkoutResult, setCheckoutResult] = useState(null);
+  const [checkoutError, setCheckoutError] = useState(null);
   const [employeeInfo, setEmployeeInfo] = useState(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -217,6 +218,7 @@ export default function CheckoutModal({
     setCapturedImage("");
     setFrameCount(0);
     setSubmitError("");
+    setCheckoutError(null);
     setAutoCountdown(5);
     setIsAutoCounting(false);
 
@@ -726,10 +728,21 @@ export default function CheckoutModal({
       });
 
       const data = await response.json();
-      console.log("checkout response: " + JSON.stringify(data));
+      console.log("Checkout backend response:", data);
+      console.log("Response status:", response.status, response.ok);
+      console.log("Extracted checkoutStatus:", data.data?.status);
 
       if (!response.ok) {
-        throw new Error(data.message || "Checkout thất bại.");
+        // Extract specific status for error display
+        const checkoutStatus = data.data?.status || "FAILED";
+        const errorMessage = data.message || "Checkout thất bại.";
+        setCheckoutError({
+          checkoutStatus,
+          message: errorMessage,
+          faceMatchScore: data.data?.faceMatchScore ?? null,
+          livenessScore: data.data?.livenessScore ?? null,
+        });
+        throw new Error(errorMessage);
       }
 
       if (data.data) setCheckoutResult(data.data);
@@ -835,6 +848,7 @@ export default function CheckoutModal({
                 )}
                 {cameraError && <div className="text-xs font-medium text-red-600">{cameraError}</div>}
                 {submitError && <div className="text-xs font-medium text-red-600">{submitError}</div>}
+                {checkoutError && <CheckoutStatusBanner result={checkoutError} />}
               </div>
             </div>
           </div>
@@ -1035,6 +1049,97 @@ function ResultCard({ title, value, highlight }) {
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{title}</p>
       <p className={`mt-2 text-lg font-extrabold sm:text-xl ${highlight}`}>{value}</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CheckoutStatusBanner — hiển thị lý do thất bại từ backend
+// ─────────────────────────────────────────────────────────────────────────────
+const CHECKOUT_STATUS_CONFIG = {
+  FACE_NOT_DETECTED: {
+    icon:  "face_retouching_off",
+    color: "red",
+    title: "Không phát hiện khuôn mặt",
+    hint:  "Di chuyển vào vùng sáng hơn, nhìn thẳng vào camera và thử lại.",
+  },
+  FACE_NOT_REGISTERED: {
+    icon:  "person_off",
+    color: "orange",
+    title: "Chưa đăng ký khuôn mặt",
+    hint:  "Liên hệ HR để đăng ký nhận diện khuôn mặt trước khi checkout.",
+  },
+  FACE_NOT_MATCH: {
+    icon:  "face_unlock",
+    color: "red",
+    title: "Khuôn mặt không khớp",
+    hint:  "Bỏ kính/khẩu trang, đảm bảo ánh sáng đủ và nhìn thẳng vào camera.",
+  },
+  SPOOF_SUSPECTED: {
+    icon:  "security",
+    color: "red",
+    title: "Phát hiện giả mạo (liveness)",
+    hint:  "Hệ thống phát hiện ảnh/video giả. Vui lòng dùng khuôn mặt thật trước camera.",
+  },
+  OUTSIDE_GEOFENCE: {
+    icon:  "location_off",
+    color: "red",
+    title: "Ngoài phạm vi văn phòng",
+    hint:  "Di chuyển vào khu vực làm việc được phép rồi thử lại.",
+  },
+  FAILED: {
+    icon:  "error",
+    color: "red",
+    title: null,
+    hint:  null,
+  },
+};
+
+const CHECKOUT_COLOR_CLASSES = {
+  red:    { bg: "bg-red-50",    border: "border-red-100",    icon: "text-red-500",    title: "text-red-800",    body: "text-red-700"    },
+  orange: { bg: "bg-orange-50", border: "border-orange-100", icon: "text-orange-500", title: "text-orange-800", body: "text-orange-700" },
+};
+
+function CheckoutStatusBanner({ result }) {
+  const { checkoutStatus, message, faceMatchScore, livenessScore } = result;
+  const cfg   = CHECKOUT_STATUS_CONFIG[checkoutStatus] || CHECKOUT_STATUS_CONFIG.FAILED;
+  const cls   = CHECKOUT_COLOR_CLASSES[cfg.color] || CHECKOUT_COLOR_CLASSES.red;
+  const title = cfg.title || message;
+
+  // Debug log to check what we're receiving
+  console.log("CheckoutStatusBanner result:", result);
+
+  return (
+    <div className={`${cls.bg} border ${cls.border} rounded-lg p-3 space-y-2`}>
+      <div className="flex items-start gap-2">
+        <span className={`material-symbols-outlined text-base flex-shrink-0 mt-0.5 ${cls.icon}`}>{cfg.icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-semibold ${cls.title}`}>{title}</p>
+          {cfg.title && message && message !== title && (
+            <p className={`text-xs mt-0.5 ${cls.body}`}>{message}</p>
+          )}
+          {cfg.hint && (
+            <p className={`text-xs mt-1 ${cls.body} opacity-80`}>{cfg.hint}</p>
+          )}
+        </div>
+      </div>
+
+      {(faceMatchScore != null || livenessScore != null) && (
+        <div className={`flex gap-4 pt-1 border-t ${cls.border}`}>
+          {faceMatchScore != null && (
+            <div className="text-xs">
+              <span className={`${cls.body} opacity-70`}>Độ khớp khuôn mặt: </span>
+              <span className={`font-bold ${cls.title}`}>{(faceMatchScore * 100).toFixed(0)}%</span>
+            </div>
+          )}
+          {livenessScore != null && (
+            <div className="text-xs">
+              <span className={`${cls.body} opacity-70`}>Liveness: </span>
+              <span className={`font-bold ${cls.title}`}>{(livenessScore * 100).toFixed(0)}%</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

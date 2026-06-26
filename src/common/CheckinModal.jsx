@@ -316,9 +316,13 @@ export default function CheckinModal({ onClose }) {
             });
 
             const data = await res.json();
+            console.log("Backend response:", data);
+            console.log("Response status:", res.status, res.ok);
+            console.log("Extracted checkinStatus:", data.data?.status);
+
             return {
                 success:       res.ok,
-                message:       data.message || (res.ok ? "Checkin thành công" : "Checkin thất bại"),
+                message:       data.message,
                 checkinStatus: data.data?.status        || null,
                 faceMatchScore: data.data?.faceMatchScore ?? null,
                 livenessScore:  data.data?.livenessScore  ?? null,
@@ -630,9 +634,12 @@ function FaceCheckinModal({ onClose, onSuccess, sendCheckin }) {
 
             if (result.gpsWarning) setGpsWarning(result.gpsWarning);
 
-            if (result.success) {
+            if (result.message?.includes("Checked in successfully")) {
                 setTimeout(() => { stopCamera(); onSuccess(); }, 1500);
             } else {
+                if (result.checkinStatus) {
+                    alert(`Trạng thái check-in: ${result.checkinStatus}`);
+                }
                 setCheckinResult(result);
             }
         } catch (e) {
@@ -791,6 +798,9 @@ function CheckinStatusBanner({ result }) {
     const cfg   = CHECKIN_STATUS_CONFIG[checkinStatus] || CHECKIN_STATUS_CONFIG.FAILED;
     const cls   = COLOR_CLASSES[cfg.color] || COLOR_CLASSES.red;
     const title = cfg.title || message;
+
+    // Debug log to check what we're receiving
+    console.log("CheckinStatusBanner result:", result);
 
     return (
         <div className={`${cls.bg} border ${cls.border} rounded-lg p-3 space-y-2`}>

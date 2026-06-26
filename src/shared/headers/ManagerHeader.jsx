@@ -11,7 +11,7 @@ export default function ManagerHeader() {
       {/* LEFT: Context */}
       <div className="flex flex-col min-w-0 flex-1">
         <h1 className="text-base sm:text-lg md:text-xl font-black tracking-tight truncate">
-          Welcome back, Alex 👋
+          Welcome back, Manager 👋
         </h1>
         <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">
           Hiring Manager • Product Design Team

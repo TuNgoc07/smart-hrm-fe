@@ -27,11 +27,11 @@ function buildLineChartPoints(dataPoints) {
 }
 
 // =====================================================
-// Helpers cho SVG Donut Chart (Phase 2)
-// Tính các path segment từ mảng data [{label, value}]
+// Helpers for SVG Donut Chart (Phase 2)
+// Calculate path segments from data array [{label, value}]
 // =====================================================
 
-// Bảng màu cho các segment (tối đa 8 phòng ban)
+// Color palette for segments (max 8 departments)
 const DONUT_COLORS = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#06B6D4","#EC4899","#F97316","#84CC16","#14B8A6","#A855F7","#F43F5E","#0EA5E9","#D97706","#6366F1"];
 
 function buildDonutSegments(data) {
@@ -42,7 +42,7 @@ function buildDonutSegments(data) {
     const startRatio = cumulative / total;
     cumulative += Number(item.value || 0);
     const endRatio = cumulative / total;
-    // Góc bắt đầu từ đỉnh (-π/2) để segment đầu tiên ở trên cùng
+    // Start angle from top (-π/2) so first segment is at top
     const startAngle = startRatio * 2 * Math.PI - Math.PI / 2;
     const endAngle   = endRatio   * 2 * Math.PI - Math.PI / 2;
     const r = 40, ri = 24, cx = 50, cy = 50; // outer radius, inner radius, center
@@ -64,11 +64,11 @@ function buildDonutSegments(data) {
 
 // =====================================================
 // Phase 1 — Welcome Banner
-// Gọi /api/hradmin/me (tên HR admin) + nhận home stats từ props
+// Call /api/hradmin/me (HR admin name) + receive home stats from props
 // =====================================================
 
 function WelcomeBanner({ profile, home }) {
-  // Format ngày hôm nay theo tiếng Việt
+  // Format today's date
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
@@ -83,7 +83,7 @@ function WelcomeBanner({ profile, home }) {
         <h1 className="text-2xl font-bold">Hello, {fullName} 👋</h1>
         <p className="text-blue-100 text-sm mt-1">Here's your HR overview for today</p>
       </div>
-      {/* Quick stats ngay trong banner */}
+      {/* Quick stats in banner */}
       <div className="flex gap-6 bg-white/10 rounded-xl px-5 py-3">
         <div className="text-center">
           <p className="text-3xl font-extrabold">{home?.totalEmployees ?? "—"}</p>
@@ -105,10 +105,10 @@ function WelcomeBanner({ profile, home }) {
 }
 
 // =====================================================
-// Phase 1 — KPI Section (cải tiến: thêm breakdown trạng thái)
+// Phase 1 — KPI Section (improved: added status breakdown)
 // =====================================================
 
-// StatusPill: badge nhỏ hiển thị count theo loại trạng thái
+// StatusPill: small badge displaying count by status type
 function StatusPill({ label, count, bgClass, textClass }) {
   return (
     <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${bgClass} ${textClass}`}>
@@ -119,10 +119,10 @@ function StatusPill({ label, count, bgClass, textClass }) {
 }
 
 // =====================================================
-// KPI Detail Modal — hiển thị danh sách khi click vào card
+// KPI Detail Modal — display list when clicking card
 // =====================================================
 
-// Badge màu theo loại KPI (kể cả drill-down types)
+// Badge color by KPI type (including drill-down types)
 const KPI_BADGE_STYLE = {
   NEW_HIRES:       "bg-indigo-100 text-indigo-700",
   LATE_TODAY:      "bg-amber-100 text-amber-700",
@@ -140,16 +140,16 @@ function KpiDetailModal({ open, title, type, displayMode, data, loading, onClose
   if (!open) return null;
   const badgeStyle  = KPI_BADGE_STYLE[type] || "bg-slate-100 text-slate-600";
   const isRecordList = displayMode === "RECORD_LIST";
-  // Footer label: nhân viên vs bản ghi
+  // Footer label: employees vs records
   const footerLabel = isRecordList ? "late records" : "employees";
 
   return (
-    // Backdrop — click ngoài để đóng
+    // Backdrop — click outside to close
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={onClose}
     >
-      {/* Modal panel — click bên trong không đóng */}
+      {/* Modal panel — click inside doesn't close */}
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -182,26 +182,26 @@ function KpiDetailModal({ open, title, type, displayMode, data, loading, onClose
               ))}
             </div>
           ) : !data || data.length === 0 ? (
-            // Trống
+            // Empty
             <div className="text-center py-12">
               <span className="material-symbols-outlined text-4xl text-slate-300">inbox</span>
               <p className="text-slate-400 text-sm mt-2">No data</p>
             </div>
           ) : isRecordList ? (
-            // RECORD_LIST mode — dành cho lịch sử đi muộn (không có avatar)
+            // RECORD_LIST mode — for late history (no avatar)
             <div className="space-y-2">
               {data.map((row, idx) => (
                 <div key={idx} className="flex items-center gap-3 py-1">
-                  {/* Icon lịch thay cho avatar */}
+                  {/* Calendar icon instead of avatar */}
                   <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined text-lg">calendar_today</span>
                   </div>
-                  {/* Ngày + thông tin check-in/out */}
+                  {/* Date + check-in/out info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold">{row.fullName}</p>
                     {row.sub && <p className="text-xs text-slate-500 mt-0.5">{row.sub}</p>}
                   </div>
-                  {/* Badge: Trễ X phút */}
+                  {/* Badge: Late X minutes */}
                   <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${badgeStyle}`}>
                     {row.badge}
                   </span>
@@ -209,8 +209,8 @@ function KpiDetailModal({ open, title, type, displayMode, data, loading, onClose
               ))}
             </div>
           ) : (
-            // EMPLOYEE_LIST mode — danh sách nhân viên với avatar
-            // ATT_MONTH_* types: thêm dept group headers khi department thay đổi
+            // EMPLOYEE_LIST mode — employee list with avatar
+            // ATT_MONTH_* types: add dept group headers when department changes
             <div className="space-y-1">
               {(() => {
                 const isAttMonth = type?.startsWith("ATT_MONTH_");
@@ -287,7 +287,7 @@ function KpiCard({ title, value, icon, iconClassName, badge, badgeClassName, bad
         )}
       </div>
       <p className="text-slate-500 text-sm font-medium">{title}</p>
-      {/* Nếu có children thì render thay value */}
+      {/* If children exist, render instead of value */}
       {children ? children : <h3 className="text-3xl font-extrabold mt-1">{value}</h3>}
     </div>
   );
@@ -296,7 +296,7 @@ function KpiCard({ title, value, icon, iconClassName, badge, badgeClassName, bad
 function KpiSection({ dashboard, onCardClick }) {
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Card 1: Tổng nhân viên — không có detail riêng, bỏ qua click */}
+      {/* Card 1: Total Employees — no separate detail, skip click */}
       <KpiCard
         title="Total Employees"
         icon="groups"
@@ -312,7 +312,7 @@ function KpiSection({ dashboard, onCardClick }) {
         </div>
       </KpiCard>
 
-      {/* Card 2: Tuyển mới — click xem ai được tuyển tháng này */}
+      {/* Card 2: New Hires — click to see who was hired this month */}
       <KpiCard
         title="New Hires / Inactive"
         icon="person_add"
@@ -328,7 +328,7 @@ function KpiSection({ dashboard, onCardClick }) {
         </div>
       </KpiCard>
 
-      {/* Card 3: Đi trễ / Vắng — click xem danh sách đi trễ */}
+      {/* Card 3: Late / Absent — click to see late list */}
       <KpiCard
         title="Late / Absent (Today)"
         icon="alarm_on"
@@ -339,7 +339,7 @@ function KpiSection({ dashboard, onCardClick }) {
         onClick={() => onCardClick("LATE_TODAY")}
       >
         <div className="flex items-baseline gap-2 mt-1">
-          {/* Click số cam để xem trễ, click số đỏ để xem vắng */}
+          {/* Click orange number to view late, click red number to view absent */}
           <button
             className="text-3xl font-extrabold text-amber-600 hover:underline"
             onClick={(e) => { e.stopPropagation(); onCardClick("LATE_TODAY"); }}
@@ -354,7 +354,7 @@ function KpiSection({ dashboard, onCardClick }) {
             {dashboard?.absentEmployees ?? 0}
           </button>
         </div>
-        {/* Breakdown vắng: có phép vs không phép */}
+        {/* Breakdown absent: with leave vs without leave */}
         <div className="flex flex-wrap gap-1.5 mt-2">
           <StatusPill
             label="With Leave"
@@ -372,7 +372,7 @@ function KpiSection({ dashboard, onCardClick }) {
         <p className="text-[10px] text-slate-400 mt-1">Click numbers to view details</p>
       </KpiCard>
 
-      {/* Card 4: OT — click xem ai OT và mấy tiếng */}
+      {/* Card 4: OT — click to see who worked OT and how many hours */}
       <KpiCard
         title="OT Hours Today"
         value={`${dashboard?.otHours ?? 0}h`}
@@ -388,23 +388,23 @@ function KpiSection({ dashboard, onCardClick }) {
 
 // =====================================================
 // Phase 1 — Staff Fluctuation Chart (dual-series)
-// Nay hỗ trợ 2 series: Tuyển mới (xanh) + Nghỉ việc (đỏ)
+// Now supports 2 series: New Hires (blue) + Resigned (red)
 // =====================================================
 
-// Màu cho 2 series cố định
+// Fixed colors for 2 series
 const SERIES_COLORS = ["#3B82F6", "#EF4444"];
 
 function StaffFluctuationSection({ linechart }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const series  = linechart?.linesData || [];
-  // Lấy timelines từ series đầu tiên (chung cho tất cả series)
+  // Get timelines from first series (common for all series)
   const months  = series[0]?.timelines || [];
 
   return (
     <div className="bg-white p-6 rounded-2xl border shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">{linechart?.title || "Staff Fluctuation"}</h2>
-        {/* Legend hiển thị tên từng series */}
+        {/* Legend displaying name of each series */}
         <div className="flex gap-4">
           {series.map((s, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
@@ -417,7 +417,7 @@ function StaffFluctuationSection({ linechart }) {
 
       <div className="h-52 relative">
         <svg className="absolute inset-0 w-full h-full px-4 pt-4" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {/* Render từng series với màu riêng */}
+          {/* Render each series with its own color */}
           {series.map((s, seriesIdx) => {
             const path   = buildLineChartPath(s.datas || []);
             const points = buildLineChartPoints(s.datas || []);
@@ -441,7 +441,7 @@ function StaffFluctuationSection({ linechart }) {
             );
           })}
         </svg>
-        {/* Tooltip hiển thị khi hover */}
+        {/* Tooltip displayed on hover */}
         {hoveredPoint && (
           <div
             className="absolute bg-slate-800 text-white text-xs px-3 py-2 rounded-lg shadow-lg pointer-events-none z-10"
@@ -455,7 +455,7 @@ function StaffFluctuationSection({ linechart }) {
             <p className="text-slate-300">{hoveredPoint.label}: <span className="text-white font-semibold">{hoveredPoint.value}</span></p>
           </div>
         )}
-        {/* Label trục X */}
+        {/* X-axis labels */}
         <div className="absolute bottom-0 left-0 right-0 flex justify-between px-6">
           {months.map((month) => (
             <span key={month} className="text-[10px] text-slate-400 font-bold uppercase">{month}</span>
@@ -468,10 +468,10 @@ function StaffFluctuationSection({ linechart }) {
 
 // =====================================================
 // Phase 2 — Department Structure Donut Chart
-// Hiển thị phân bổ nhân viên active theo phòng ban
+// Display active employee distribution by department
 // =====================================================
 
-// Donut chart — segments và legend items có thể click để xem nhân viên trong phòng ban
+// Donut chart — segments and legend items can be clicked to view employees in department
 function DepartmentStructureSection({ staffStructure, onDeptClick }) {
   const cats     = staffStructure?.categoriesData || [];
   const top8     = cats.slice(0, 15);
@@ -489,7 +489,7 @@ function DepartmentStructureSection({ staffStructure, onDeptClick }) {
         <p className="text-slate-400 text-sm text-center py-10">No department data available</p>
       ) : (
         <div className="flex gap-5 items-center">
-          {/* SVG Donut — mỗi segment có thể click */}
+          {/* SVG Donut — each segment can be clicked */}
           <div className="flex-shrink-0 w-36 h-36 relative">
             <svg viewBox="0 0 100 100" className="w-full h-full">
               {segments.map((seg, i) => (
@@ -508,7 +508,7 @@ function DepartmentStructureSection({ staffStructure, onDeptClick }) {
               <text x="50" y="57" textAnchor="middle" fontSize="6.5" fill="#94a3b8">employees</text>
             </svg>
           </div>
-          {/* Legend — mỗi dòng cũng có thể click */}
+          {/* Legend — each row can also be clicked */}
           <div className="flex-1 space-y-2">
             {segments.map((seg, i) => (
               <div
@@ -538,7 +538,7 @@ function DepartmentStructureSection({ staffStructure, onDeptClick }) {
 }
 
 // =====================================================
-// OT by Department — giữ nguyên từ version cũ
+// OT by Department — kept from previous version
 // =====================================================
 
 function OtDepartmentBar({ name, value, width }) {
@@ -663,7 +663,7 @@ function TodayAttendanceChart({ dashboard, onSliceClick }) {
 }
 
 // =====================================================
-// Biểu đồ cột: Tình hình nghỉ theo phòng ban (grouped bar)
+// Bar Chart: Leave by Department (grouped bar)
 // =====================================================
 
 const LEAVE_BAR_W = 22, LEAVE_BAR_GAP = 8, LEAVE_GROUP_GAP = 32;
@@ -795,17 +795,17 @@ function LeaveByDepartmentSection({ leaveByDepartment, onDeptClick }) {
 
 // =====================================================
 // Phase 2 — Top Late Employees Ranking
-// Xếp hạng top 5 nhân viên đi muộn nhiều nhất tháng này
+// Rank top 5 employees with most late arrivals this month
 // =====================================================
 
-// Màu huy chương cho top 3
+// Medal colors for top 3
 const RANK_STYLES = [
   "bg-red-100 text-red-700",
   "bg-amber-100 text-amber-700",
   "bg-orange-100 text-orange-700",
 ];
 
-// Top Late section — mỗi hàng nhân viên có thể click để xem chi tiết các ngày đi muộn
+// Top Late section — each employee row can be clicked to view detailed late days
 function TopLateEmployeesSection({ topLateEmployees, onEmpClick }) {
   const employees = topLateEmployees || [];
 
@@ -817,7 +817,7 @@ function TopLateEmployeesSection({ topLateEmployees, onEmpClick }) {
       </div>
 
       {employees.length === 0 ? (
-        // Trạng thái trống — không ai đi muộn hoặc chưa có dữ liệu
+        // Empty state — no one late or no data available
         <div className="text-center py-8">
           <span className="material-symbols-outlined text-4xl text-green-400">check_circle</span>
           <p className="text-slate-500 text-sm mt-2 font-medium">Great!</p>
@@ -826,7 +826,7 @@ function TopLateEmployeesSection({ topLateEmployees, onEmpClick }) {
       ) : (
         <div className="space-y-3">
           {employees.map((emp, idx) => {
-            // Tạo initials từ fullName để hiển thị khi không có avatar
+            // Create initials from fullName to display when no avatar
             const parts    = (emp.fullName || "").split(" ").filter(Boolean);
             const initials = parts.length >= 2
               ? `${parts[parts.length - 2][0]}${parts[parts.length - 1][0]}`.toUpperCase()
@@ -839,11 +839,11 @@ function TopLateEmployeesSection({ topLateEmployees, onEmpClick }) {
                 className={`flex items-center gap-3 rounded-xl px-2 py-1 -mx-2 transition-all ${onEmpClick ? "cursor-pointer hover:bg-slate-50" : ""}`}
                 onClick={() => onEmpClick && onEmpClick(emp.employeeId, emp.fullName)}
               >
-                {/* Số thứ hạng */}
+                {/* Rank number */}
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${rankStyle}`}>
                   {idx + 1}
                 </span>
-                {/* Avatar hoặc initials */}
+                {/* Avatar or initials */}
                 {emp.avatarUrl ? (
                   <img src={emp.avatarUrl} className="w-9 h-9 rounded-full object-cover flex-shrink-0" alt="" />
                 ) : (
@@ -851,12 +851,12 @@ function TopLateEmployeesSection({ topLateEmployees, onEmpClick }) {
                     {initials}
                   </div>
                 )}
-                {/* Tên và phòng ban */}
+                {/* Name and department */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{emp.fullName}</p>
                   <p className="text-xs text-slate-400 truncate">{emp.departmentName}</p>
                 </div>
-                {/* Số lần đi muộn */}
+                {/* Number of late arrivals */}
                 <span className="text-sm font-extrabold text-red-500 flex-shrink-0">
                   {emp.lateCount}×
                 </span>
@@ -870,22 +870,22 @@ function TopLateEmployeesSection({ topLateEmployees, onEmpClick }) {
 }
 
 // =====================================================
-// Phase 3 — Reminders Panel (thay thế AI Insights hardcode)
-// Hiển thị nhắc việc thực tế từ backend:
+// Phase 3 — Reminders Panel (replaces hardcoded AI Insights)
+// Display actual reminders from backend:
 //   CONTRACT_EXPIRING, PROBATION_ENDING, BIRTHDAY, OVERDUE_REQUEST, WORK_ANNIVERSARY
 // =====================================================
 
-// Cấu hình icon + màu cho từng loại nhắc việc
+// Icon + color configuration for each reminder type
 const REMINDER_CONFIG = {
   CONTRACT_EXPIRING: { icon: "description",     bg: "bg-red-50",     text: "text-red-600"    },
   PROBATION_ENDING:  { icon: "work_history",     bg: "bg-amber-50",   text: "text-amber-600"  },
   BIRTHDAY:          { icon: "cake",             bg: "bg-blue-50",    text: "text-blue-600"   },
   OVERDUE_REQUEST:   { icon: "pending_actions",  bg: "bg-orange-50",  text: "text-orange-600" },
-  // Kỷ niệm ngày vào làm — màu xanh lá
+  // Work anniversary — green color
   WORK_ANNIVERSARY:  { icon: "military_tech",    bg: "bg-green-50",   text: "text-green-600"  },
 };
 
-// Border trái theo mức độ severity
+// Left border by severity level
 const SEVERITY_BORDER = {
   red:   "border-l-red-400",
   amber: "border-l-amber-400",
@@ -893,7 +893,7 @@ const SEVERITY_BORDER = {
   green: "border-l-green-400",
 };
 
-// Badge nền theo severity
+// Badge background by severity
 const SEVERITY_BADGE = {
   red:   "bg-red-100 text-red-600",
   amber: "bg-amber-100 text-amber-700",
@@ -911,7 +911,7 @@ function RemindersSection({ reminders }) {
           <span className="material-symbols-outlined text-base">notifications_active</span>
         </div>
         <h2 className="text-lg font-bold">Reminders</h2>
-        {/* Badge đếm số nhắc việc — chỉ hiện khi có mục */}
+        {/* Badge counting reminders — only shown when items exist */}
         {items.length > 0 && (
           <span className="ml-auto text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
             {items.length}
@@ -920,7 +920,7 @@ function RemindersSection({ reminders }) {
       </div>
 
       {items.length === 0 ? (
-        // Trạng thái trống — không có gì cần nhắc
+        // Empty state — nothing to remind
         <div className="text-center py-8">
           <span className="material-symbols-outlined text-4xl text-green-400">check_circle</span>
           <p className="text-slate-500 text-sm mt-2 font-medium">All done!</p>
@@ -936,19 +936,19 @@ function RemindersSection({ reminders }) {
             return (
               <div key={i} className={`p-3 rounded-xl border border-l-4 ${borderClass} bg-slate-50`}>
                 <div className="flex items-start gap-2.5">
-                  {/* Icon loại nhắc việc */}
+                  {/* Reminder type icon */}
                   <div className={`size-7 rounded-lg flex-shrink-0 flex items-center justify-center ${cfg.bg} ${cfg.text}`}>
                     <span className="material-symbols-outlined text-sm">{cfg.icon}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    {/* Tiêu đề + badge số lượng */}
+                    {/* Title + count badge */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-xs font-bold text-slate-800">{item.title}</p>
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
                         {item.count}
                       </span>
                     </div>
-                    {/* Mô tả chi tiết */}
+                    {/* Detailed description */}
                     <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.description}</p>
                   </div>
                 </div>
@@ -963,7 +963,7 @@ function RemindersSection({ reminders }) {
 
 // =====================================================
 // Main Dashboard Component
-// Fetch 3 APIs song song: dashboard, profile, home
+// Fetch 3 APIs in parallel: dashboard, profile, home
 // =====================================================
 
 export default function HRDashboard() {
@@ -971,7 +971,7 @@ export default function HRDashboard() {
   const [profile,   setProfile]   = useState(null);
   const [home,      setHome]      = useState(null);
 
-  // State cho KPI Detail Modal
+  // State for KPI Detail Modal
   const [modal, setModal] = useState({ open: false, type: null, title: "", data: null, loading: false });
 
   useEffect(() => {
@@ -982,7 +982,7 @@ export default function HRDashboard() {
     }
     const headers = { Authorization: `Bearer ${token}` };
 
-    // Fetch 3 APIs song song để tối ưu load time
+    // Fetch 3 APIs in parallel to optimize load time
     Promise.all([
       fetch(`${API_BASE_URL}/api/hradmin/dashboard`, { headers }).then((r) => r.json()),
       fetch(`${API_BASE_URL}/api/hradmin/me`,        { headers }).then((r) => r.json()),
@@ -997,7 +997,7 @@ export default function HRDashboard() {
       .catch((err) => console.error("Dashboard fetch error:", err));
   }, []);
 
-  // Mở modal + fetch dữ liệu chi tiết theo type
+  // Open modal + fetch detailed data by type
   const handleCardClick = (type) => {
     const titleMap = {
       NEW_HIRES:     "New Hires This Month",
@@ -1020,7 +1020,7 @@ export default function HRDashboard() {
 
   const closeModal = () => setModal({ open: false, type: null, title: "", displayMode: null, data: null, loading: false });
 
-  // Generic fetch helper cho mọi loại drill-down
+  // Generic fetch helper for all drill-down types
   const openDetailModal = (url, title, type, displayMode = "EMPLOYEE_LIST") => {
     setModal({ open: true, type, title, displayMode, data: null, loading: true });
     const token = localStorage.getItem("token");
@@ -1036,7 +1036,7 @@ export default function HRDashboard() {
       .catch(() => setModal((prev) => ({ ...prev, data: [], loading: false })));
   };
 
-  // Click segment donut → danh sách nhân viên phòng ban
+  // Click donut segment → department employee list
   const handleDeptClick = (departmentName) => {
     openDetailModal(
       `${API_BASE_URL}/api/hradmin/dashboard/department-employees?departmentName=${encodeURIComponent(departmentName)}`,
@@ -1046,7 +1046,7 @@ export default function HRDashboard() {
     );
   };
 
-  // Click bar phòng ban trong biểu đồ nghỉ → chi tiết bản ghi nghỉ
+  // Click department bar in leave chart → leave record details
   const handleLeaveBarClick = (departmentName) => {
     openDetailModal(
       `${API_BASE_URL}/api/hradmin/dashboard/department-leave-detail?departmentName=${encodeURIComponent(departmentName)}`,
@@ -1056,7 +1056,7 @@ export default function HRDashboard() {
     );
   };
 
-  // Click nhân viên trong Top Late → lịch sử đi muộn tháng này
+  // Click employee in Top Late → late history this month
   const handleLateEmpClick = (employeeId, fullName) => {
     openDetailModal(
       `${API_BASE_URL}/api/hradmin/dashboard/employee-late-history?employeeId=${employeeId}`,
@@ -1071,21 +1071,21 @@ export default function HRDashboard() {
       {/* Phase 1: Welcome Banner */}
       <WelcomeBanner profile={profile} home={home} />
 
-      {/* Phase 1: KPI Cards — truyền onCardClick để mở modal */}
+      {/* Phase 1: KPI Cards — pass onCardClick to open modal */}
       <KpiSection dashboard={dashboard} onCardClick={handleCardClick} />
 
-      {/* Row 3: Biến động nhân sự (dual-series) + Nhắc việc (Phase 1 + 3) */}
+      {/* Row 3: Staff Fluctuation (dual-series) + Reminders (Phase 1 + 3) */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <StaffFluctuationSection linechart={dashboard?.linechart} />
         </div>
         <div>
-          {/* Phase 3: Reminders thực tế (thay thế AI Insights hardcode) */}
+          {/* Phase 3: Actual Reminders (replaces hardcoded AI Insights) */}
           <RemindersSection reminders={dashboard?.reminders} />
         </div>
       </section>
 
-      {/* Row 4: Cơ cấu NV (donut, click segment = xem nhân viên) + Top đi muộn (click hàng = xem lịch sử muộn) */}
+      {/* Row 4: Staff Structure (donut, click segment = view employees) + Top Late (click row = view late history) */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DepartmentStructureSection staffStructure={dashboard?.staffStructure} onDeptClick={handleDeptClick} />
         <TopLateEmployeesSection    topLateEmployees={dashboard?.topLateEmployees} onEmpClick={handleLateEmpClick} />
@@ -1094,13 +1094,13 @@ export default function HRDashboard() {
       {/* Row 5: Today's attendance breakdown */}
       <TodayAttendanceChart dashboard={dashboard} onSliceClick={handleCardClick} />
 
-      {/* Row 6: Tình hình nghỉ theo phòng ban — grouped bar, click để xem chi tiết */}
+      {/* Row 6: Leave by Department — grouped bar, click to view details */}
       <LeaveByDepartmentSection leaveByDepartment={dashboard?.leaveByDepartment} onDeptClick={handleLeaveBarClick} />
 
-      {/* Row 6: OT theo phòng ban (giữ nguyên từ version cũ) */}
+      {/* Row 6: OT by Department (kept from previous version) */}
       <OtDepartmentSection categoryChart={dashboard?.categoryChart} />
 
-      {/* KPI Detail Modal — render ngoài cùng để overlay đúng */}
+      {/* KPI Detail Modal — render last to overlay correctly */}
       <KpiDetailModal
         open={modal.open}
         type={modal.type}

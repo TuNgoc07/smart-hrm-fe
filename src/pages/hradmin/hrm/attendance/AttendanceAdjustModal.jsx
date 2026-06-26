@@ -45,21 +45,21 @@ export default function AttendanceAdjustModal({ data, onClose, onSaved }) {
     if (action !== "manual") return null;
     const ciMin = toMin(checkin);
     const coMin = toMin(checkout);
-    if (ciMin == null || coMin == null) return null;
+    if (ciMin == null && coMin == null) return null;
 
-    const lateMin  = Math.max(0, ciMin - shiftStartMin);
-    const otMin    = coMin > shiftEndMin  ? coMin - shiftEndMin  : 0;
-    const earlyMin = coMin < shiftEndMin  ? shiftEndMin - coMin  : 0;
-    const workMin  = Math.max(0, coMin - ciMin - 90);
+    const lateMin  = ciMin != null ? Math.max(0, ciMin - shiftStartMin) : null;
+    const otMin    = coMin != null && coMin > shiftEndMin ? coMin - shiftEndMin : null;
+    const earlyMin = coMin != null && coMin < shiftEndMin ? shiftEndMin - coMin : null;
+    const workMin  = ciMin != null && coMin != null ? Math.max(0, coMin - ciMin - 90) : null;
 
     // Exception impact
     let exceptionNote = null;
-    if (lateMin > LATE_THRESHOLD) {
+    if (lateMin != null && lateMin > LATE_THRESHOLD) {
       if (originalLateMin <= LATE_THRESHOLD) {
         exceptionNote = { type: "create", msg: `Sẽ tạo exception LATE_ARRIVAL (đi trễ ${lateMin} phút)` };
       }
       // else: đã có exception rồi, không cần thêm note
-    } else if (lateMin <= LATE_THRESHOLD && originalLateMin > LATE_THRESHOLD) {
+    } else if (lateMin != null && lateMin <= LATE_THRESHOLD && originalLateMin > LATE_THRESHOLD) {
       exceptionNote = { type: "resolve", msg: `Exception LATE_ARRIVAL hiện tại sẽ được tự động đóng` };
     }
 
@@ -68,7 +68,7 @@ export default function AttendanceAdjustModal({ data, onClose, onSaved }) {
 
   const handleSubmit = async () => {
     if (!confirmed) { setError("Vui lòng xác nhận trước khi lưu."); return; }
-    if (action === "manual" && (!checkin || !checkout)) { setError("Vui lòng nhập đủ giờ check-in và check-out."); return; }
+    if (action === "manual" && !checkin && !checkout) { setError("Vui lòng nhập ít nhất giờ check-in hoặc check-out."); return; }
     if (!reason.trim()) { setError("Vui lòng nhập lý do điều chỉnh."); return; }
 
     setSubmitting(true);
@@ -77,8 +77,8 @@ export default function AttendanceAdjustModal({ data, onClose, onSaved }) {
     const payload = {
       recordId:   recordInfo.recordId,
       action,
-      checkin:    action === "manual" ? `${checkin}:00`  : undefined,
-      checkout:   action === "manual" ? `${checkout}:00` : undefined,
+      checkin:    action === "manual" && checkin ? `${checkin}:00` : null,
+      checkout:   action === "manual" && checkout ? `${checkout}:00` : null,
       reason,
       adjustedBy: Number(localStorage.getItem("employeeId")) || null,
     };
@@ -157,7 +157,7 @@ export default function AttendanceAdjustModal({ data, onClose, onSaved }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1.5">
-                    Check-in <span className="text-red-500">*</span>
+                    Check-in
                   </label>
                   <input
                     type="time"
@@ -168,7 +168,7 @@ export default function AttendanceAdjustModal({ data, onClose, onSaved }) {
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1.5">
-                    Check-out <span className="text-red-500">*</span>
+                    Check-out
                   </label>
                   <input
                     type="time"

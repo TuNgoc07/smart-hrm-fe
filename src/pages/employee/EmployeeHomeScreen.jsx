@@ -74,7 +74,7 @@ function WelcomeCard({ dashboard, loading }) {
                     <div>
                         {loading
                             ? <div className="h-7 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-2" />
-                            : <h2 className="text-[#0d141b] dark:text-white text-2xl font-extrabold tracking-tight">Good Morning, {name} 👋</h2>
+                            : <h2 className="text-[#0d141b] dark:text-white text-2xl font-extrabold tracking-tight">Welcome, {name} 👋</h2>
                         }
                         <p className="text-[#4c739a] font-medium mt-1">{today}</p>
                     </div>
